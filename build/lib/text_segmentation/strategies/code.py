@@ -71,13 +71,14 @@ class CodeSplitter(TextSplitter):
                 "\"advanced-text-segmentation[code]\"` or `pip install tree-sitter tree-sitter-languages`."
             )
         try:
-            self.parser: Parser = get_parser(language)
-            self.language: Language = self.parser.language
+            self.language: Language = get_language(language)
         except Exception:
             raise ValueError(
                 f"Language '{language}' is not supported or could not be loaded. "
                 "Please ensure it is a valid language supported by tree-sitter-languages."
             )
+
+        self.parser: Parser = get_parser(language)
         self._chunkable_node_types: Set[str] = set(LANGUAGE_QUERIES.get(language, {}).keys())
 
     def _get_node_name(self, node: Node, text_bytes: bytes) -> Optional[str]:

@@ -51,11 +51,8 @@ class Chunk:
             raise ValueError("start_index must be a non-negative integer.")
         if self.end_index < self.start_index:
             raise ValueError("end_index must not be less than start_index.")
-        # This validation is too strict for the "base unit" pattern where
-        # a negative number might be used as a placeholder.
-        # The final sequence number is guaranteed to be correct.
-        # if self.sequence_number < 0:
-        #     raise ValueError("sequence_number must be a non-negative integer.")
+        if self.sequence_number < 0:
+            raise ValueError("sequence_number must be a non-negative integer.")
 
     def to_dict(self) -> Dict[str, Any]:
         """Converts the Chunk object to a dictionary."""
