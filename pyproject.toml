@@ -1,0 +1,55 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "advanced-text-segmentation"
+version = "0.1.0"
+description = "A state-of-the-art Python package for advanced text segmentation (chunking)."
+readme = "README.md"
+authors = [{ name = "Jules", email = "jules@example.com" }]
+license = { file = "LICENSE" }
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Text Processing",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence"
+]
+requires-python = ">=3.8"
+dependencies = []
+
+[project.optional-dependencies]
+# R-6.3.2: Optional dependencies for specialized features
+nlp = [
+    "nltk>=3.8",
+]
+semantic = [
+    "numpy>=1.26",
+]
+code = [
+    "tree-sitter>=0.21.0",
+    "tree-sitter-languages>=1.10.0"
+]
+markdown = [
+    "markdown-it-py>=3.0.0"
+]
+html = [
+    "beautifulsoup4>=4.12.3",
+    "lxml>=5.2.0"
+]
+# For integration with other frameworks
+langchain = ["langchain-core"]
+llamaindex = ["llama-index-core>=0.10.0"]
+# For development and testing
+dev = [
+    "pytest>=8.0.0",
+]
+
+
+[project.urls]
+"Homepage" = "https://github.com/example/advanced-text-segmentation"
+"Bug Tracker" = "https://github.com/example/advanced-text-segmentation/issues"
+
+[tool.pytest.ini_options]
+pythonpath = "src"
