@@ -125,33 +125,34 @@ class TestBaseFunctionality:
         with pytest.raises(ValueError, match="minimum_chunk_size .* must be smaller than"):
             FixedSizeSplitter(chunk_size=100, minimum_chunk_size=100, chunk_overlap=0)
 
-    def test_preprocess_null_bytes(self):
-        text = "This text contains\x00 a null byte."
-        splitter = FixedSizeSplitter(chunk_size=100, chunk_overlap=0)
-        chunks = splitter.split_text(text)
-        assert "\x00" not in chunks[0].content
-        assert chunks[0].content == "This text contains a null byte."
-
-    def test_preprocess_removes_bom(self):
+    def test_strip_control_chars_option(self):
         """
-        Tests that the UTF-8 Byte-Order Mark (BOM) is stripped from the
-        beginning of the text during preprocessing, as per FRD R-2.2.2.
+        Tests the `strip_control_chars` option as per FRD R-2.2.2.
         """
-        text_with_bom = "\ufeffThis text starts with a BOM."
-        expected_text = "This text starts with a BOM."
+        # A string containing a variety of control characters:
+        # \x00 (null), \x08 (backspace), \ufeff (BOM), \x1f (unit separator)
+        text_with_control_chars = "\ufeffHello\x00 World\x08!\x1f"
+        expected_clean_text = "Hello World!"
 
-        # Instantiate any concrete splitter to get access to the _preprocess method
-        splitter = FixedSizeSplitter(chunk_size=100, chunk_overlap=0)
+        # --- Test Case 1: strip_control_chars is True ---
+        # The control characters should be removed.
+        splitter_true = FixedSizeSplitter(
+            chunk_size=100,
+            chunk_overlap=0,
+            strip_control_chars=True
+        )
+        chunks_true = splitter_true.split_text(text_with_control_chars)
+        assert chunks_true[0].content == expected_clean_text
 
-        # Directly test the internal _preprocess method
-        processed_text = splitter._preprocess(text_with_bom)
-
-        assert processed_text == expected_text
-        assert not processed_text.startswith("\ufeff")
-
-        # Also test it as part of the full split_text pipeline
-        chunks = splitter.split_text(text_with_bom)
-        assert chunks[0].content == expected_text
+        # --- Test Case 2: strip_control_chars is False (Default) ---
+        # The control characters should be preserved.
+        splitter_false = FixedSizeSplitter(
+            chunk_size=100,
+            chunk_overlap=0,
+            strip_control_chars=False # Explicitly set for clarity
+        )
+        chunks_false = splitter_false.split_text(text_with_control_chars)
+        assert chunks_false[0].content == text_with_control_chars
 
     def test_runt_handling_at_boundaries(self):
         """

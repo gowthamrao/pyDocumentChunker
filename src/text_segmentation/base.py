@@ -33,6 +33,7 @@ class TextSplitter(ABC):
         unicode_normalize: Optional[str] = None,
         minimum_chunk_size: Optional[int] = None,
         min_chunk_merge_strategy: str = "merge_with_previous",
+        strip_control_chars: bool = False,
     ):
         """
         Initializes the TextSplitter.
@@ -50,6 +51,8 @@ class TextSplitter(ABC):
             min_chunk_merge_strategy: How to handle chunks smaller than
                 `minimum_chunk_size`. Can be 'discard', 'merge_with_previous',
                 or 'merge_with_next'.
+            strip_control_chars: If True, removes all Unicode control characters
+                (categories starting with 'C') from the text before processing.
 
         Raises:
             ValueError: If `chunk_overlap` is not smaller than `chunk_size`.
@@ -88,6 +91,7 @@ class TextSplitter(ABC):
         self.length_function = length_function or len
         self.normalize_whitespace = normalize_whitespace
         self.unicode_normalize = unicode_normalize
+        self.strip_control_chars = strip_control_chars
         self.minimum_chunk_size = minimum_chunk_size or 0
         self.min_chunk_merge_strategy = min_chunk_merge_strategy
 
@@ -171,13 +175,15 @@ class TextSplitter(ABC):
 
         This method is called by concrete splitter implementations before chunking.
         """
-        # Remove the UTF-8 Byte-Order Mark (BOM) if it exists at the start of the text,
-        # as it can interfere with parsing and processing.
-        if text.startswith("\ufeff"):
-            text = text[1:]
-
-        # Remove null bytes, as they can cause issues with many text processing tools.
-        text = text.replace("\x00", "")
+        if self.strip_control_chars:
+            # Remove all characters in Unicode categories starting with 'C' (Other).
+            # This includes Cc (Control), Cf (Format), Cs (Surrogate),
+            # Co (Private Use), and Cn (Unassigned).
+            # This is a robust way to remove null bytes, BOM, and other non-printing
+            # characters that can interfere with processing.
+            text = "".join(
+                char for char in text if unicodedata.category(char)[0] != "C"
+            )
 
         if self.unicode_normalize:
             text = unicodedata.normalize(self.unicode_normalize, text)
