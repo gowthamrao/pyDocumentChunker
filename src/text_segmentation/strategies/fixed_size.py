@@ -26,6 +26,7 @@ class FixedSizeSplitter(TextSplitter):
         """
         Splits the input text into fixed-size character chunks.
         """
+        text = self._preprocess(text)
         if not text:
             return []
 
@@ -54,4 +55,4 @@ class FixedSizeSplitter(TextSplitter):
             start_index += step
             sequence_number += 1
 
-        return chunks
+        return self._enforce_minimum_chunk_size(chunks)

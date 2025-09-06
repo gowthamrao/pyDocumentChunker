@@ -58,25 +58,25 @@ def test_no_sentences_found():
     assert splitter.split_text("         ") == []
     assert splitter.split_text("...") == []
 
-def test_dependency_import_error(mocker):
+from unittest.mock import patch
+
+def test_dependency_import_error():
     """
     Tests that an ImportError is raised if NLTK is not installed.
-    We use the mocker fixture to simulate its absence.
+    We use unittest.mock to simulate its absence.
     """
     import sys
     import importlib
 
     # Simulate that the `nltk` package is not available
-    mocker.patch.dict(sys.modules, {"nltk": None})
+    with patch.dict(sys.modules, {"nltk": None}):
+        # The module that imports `nltk` must be reloaded for the patch to take effect
+        import text_segmentation.strategies.sentence
+        importlib.reload(text_segmentation.strategies.sentence)
 
-    # The module that imports `nltk` must be reloaded for the patch to take effect
-    import text_segmentation.strategies.sentence
-    importlib.reload(text_segmentation.strategies.sentence)
+        from text_segmentation.strategies.sentence import SentenceSplitter
+        with pytest.raises(ImportError, match="NLTK is not installed"):
+            SentenceSplitter()
 
-    from text_segmentation.strategies.sentence import SentenceSplitter
-    with pytest.raises(ImportError, match="NLTK is not installed"):
-        SentenceSplitter()
-
-    # It's good practice to restore the original state after the test,
-    # which can be done by reloading the module again.
-    importlib.reload(text_segmentation.strategies.sentence)
+    # The with block automatically restores sys.modules, so the module is
+    # usable by other tests. Another reload is not necessary.
