@@ -44,61 +44,57 @@ def test_initialization():
 def test_simple_paragraph_splitting():
     """Test splitting a simple text with only paragraphs."""
     text = "First paragraph.\\n\\nSecond paragraph.".replace("\\n", "\n")
-    splitter = MarkdownSplitter(chunk_size=50, chunk_overlap=10)
+    # With a small chunk size, they are split.
+    splitter = MarkdownSplitter(chunk_size=20, chunk_overlap=0)
     chunks = splitter.split_text(text)
-
     assert len(chunks) == 2
-    assert chunks[0].content == "First paragraph."
-    assert chunks[1].content == "Second paragraph."
-    assert chunks[0].start_index == 0
-    assert chunks[1].start_index == 18
+    assert chunks[0].content.strip() == "First paragraph."
+    assert chunks[1].content.strip() == "Second paragraph."
+
+    # With a large chunk size, they are merged.
+    splitter_large = MarkdownSplitter(chunk_size=100, chunk_overlap=0)
+    chunks_large = splitter_large.split_text(text)
+    assert len(chunks_large) == 1
+    assert "First paragraph" in chunks_large[0].content
+    assert "Second paragraph" in chunks_large[0].content
 
 def test_header_splitting_and_context():
-    """Test that text is split by headers and context is captured."""
+    """Test that text is split by headers, creating hierarchical chunks."""
     text = "# Title\\n\\nParagraph 1.\\n\\n## Subtitle\\n\\nParagraph 2.".replace("\\n", "\n")
     splitter = MarkdownSplitter(chunk_size=100, chunk_overlap=10)
     chunks = splitter.split_text(text)
 
-    assert len(chunks) == 4
-
-    # Test Header 1
-    assert chunks[0].content == "# Title"
+    # The new logic groups by context. The H1 and its paragraph are one group.
+    # The H2 and its paragraph are another.
+    assert len(chunks) == 2
+    assert chunks[0].content.strip() == "# Title\n\nParagraph 1."
     assert chunks[0].hierarchical_context == {"H1": "Title"}
-
-    # Test Paragraph 1
-    assert chunks[1].content == "Paragraph 1."
-    assert chunks[1].hierarchical_context == {"H1": "Title"}
-
-    # Test Header 2
-    assert chunks[2].content == "## Subtitle"
-    assert chunks[2].hierarchical_context == {"H1": "Title", "H2": "Subtitle"}
-
-    # Test Paragraph 2
-    assert chunks[3].content == "Paragraph 2."
-    assert chunks[3].hierarchical_context == {"H1": "Title", "H2": "Subtitle"}
+    assert chunks[1].content.strip() == "## Subtitle\n\nParagraph 2."
+    assert chunks[1].hierarchical_context == {"H1": "Title", "H2": "Subtitle"}
 
 def test_list_splitting():
-    """Test that lists are treated as single blocks."""
+    """Test that lists are treated as single blocks and grouped with neighbors."""
     text = "Intro paragraph.\\n\\n- Item 1\\n- Item 2\\n- Item 3\\n\\nOutro.".replace("\\n", "\n")
-    splitter = MarkdownSplitter(chunk_size=100, chunk_overlap=10)
+    # With a large chunk size, all three blocks should be merged.
+    splitter = MarkdownSplitter(chunk_size=200, chunk_overlap=10)
     chunks = splitter.split_text(text)
 
-    assert len(chunks) == 3
-    assert chunks[0].content == "Intro paragraph."
-    assert "Item 1" in chunks[1].content
-    assert "Item 3" in chunks[1].content
-    assert chunks[2].content == "Outro."
+    assert len(chunks) == 1
+    assert "Intro paragraph" in chunks[0].content
+    assert "Item 1" in chunks[0].content
+    assert "Outro" in chunks[0].content
 
 def test_code_block_splitting():
-    """Test that code blocks are treated as single blocks."""
+    """Test that code blocks are treated as single blocks and grouped."""
     text = "P1\\n\\n```python\\ndef test():\\n    pass\\n```\\n\\nP2".replace("\\n", "\n")
-    splitter = MarkdownSplitter(chunk_size=100, chunk_overlap=10)
+    # With a large chunk size, all three blocks should be merged.
+    splitter = MarkdownSplitter(chunk_size=200, chunk_overlap=10)
     chunks = splitter.split_text(text)
 
-    assert len(chunks) == 3
-    assert chunks[0].content == "P1"
-    assert chunks[1].content.startswith("```python")
-    assert chunks[2].content == "P2"
+    assert len(chunks) == 1
+    assert "P1" in chunks[0].content
+    assert "def test()" in chunks[0].content
+    assert "P2" in chunks[0].content
 
 def test_oversized_block_fallback():
     """Test that a block larger than chunk_size is split by the fallback."""

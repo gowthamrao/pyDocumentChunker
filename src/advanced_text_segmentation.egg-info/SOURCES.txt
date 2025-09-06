@@ -28,6 +28,7 @@ tests/test_base.py
 tests/test_code.py
 tests/test_fixed_size.py
 tests/test_html.py
+tests/test_markdown_hierarchical.py
 tests/test_markdown_new.py
 tests/test_recursive.py
 tests/test_recursive_regex.py
