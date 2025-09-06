@@ -3,6 +3,7 @@ from typing import Any, List, Optional, Tuple
 
 from text_segmentation.base import TextSplitter
 from text_segmentation.core import Chunk
+from text_segmentation.utils import _populate_overlap_metadata
 
 
 class RecursiveCharacterSplitter(TextSplitter):
@@ -192,13 +193,7 @@ class RecursiveCharacterSplitter(TextSplitter):
             )
             chunks.append(chunk)
 
-        # Post-process to add overlap metadata
-        for i in range(len(chunks) - 1):
-            current_chunk = chunks[i]
-            next_chunk = chunks[i + 1]
-            if next_chunk.start_index < current_chunk.end_index:
-                overlap_content = text[next_chunk.start_index:current_chunk.end_index]
-                current_chunk.overlap_content_next = overlap_content
-                next_chunk.overlap_content_previous = overlap_content
+        # Post-process to add overlap metadata using the shared utility.
+        _populate_overlap_metadata(chunks, text)
 
         return self._enforce_minimum_chunk_size(chunks)
