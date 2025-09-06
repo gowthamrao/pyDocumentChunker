@@ -2,7 +2,7 @@ Metadata-Version: 2.4
 Name: advanced-text-segmentation
 Version: 0.1.0
 Summary: A state-of-the-art Python package for advanced text segmentation (chunking).
-Author-email: Jules <jules@example.com>
+Author-email: Gowtham Rao <rao@ohdsi.org>
 License:                                  Apache License
                                    Version 2.0, January 2004
                                 http://www.apache.org/licenses/
@@ -215,6 +215,7 @@ Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
 Requires-Python: >=3.8
 Description-Content-Type: text/markdown
 License-File: LICENSE
+License-File: NOTICE
 Provides-Extra: nlp
 Requires-Dist: nltk>=3.8; extra == "nlp"
 Provides-Extra: spacy

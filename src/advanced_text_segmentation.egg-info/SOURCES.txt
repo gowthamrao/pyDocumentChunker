@@ -1,4 +1,5 @@
 LICENSE
+NOTICE
 README.md
 pyproject.toml
 src/advanced_text_segmentation.egg-info/PKG-INFO
@@ -27,6 +28,7 @@ src/text_segmentation/strategies/structure/markdown.py
 tests/test_base.py
 tests/test_code.py
 tests/test_code_java.py
+tests/test_core.py
 tests/test_fixed_size.py
 tests/test_html.py
 tests/test_markdown_hierarchical.py

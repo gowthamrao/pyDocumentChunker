@@ -1,5 +1,6 @@
 import pytest
 from text_segmentation.strategies.structure.markdown import MarkdownSplitter
+from unittest.mock import patch
 
 # FRD Requirement Being Tested:
 # R-3.4.3: The strategy MUST prioritize splitting at higher-level structural boundaries.
@@ -93,3 +94,40 @@ def test_hierarchical_and_block_type_splitting():
     assert "More and more" in chunks[8].content
     assert chunks[8].hierarchical_context == {"H1": "Section 3 Title"}
     assert chunks[8].chunking_strategy_used == "markdown-fallback"
+
+def test_import_error_if_markdown_it_not_installed():
+    """
+    Tests that an ImportError is raised if markdown-it-py is not installed.
+    """
+    with patch("text_segmentation.strategies.structure.markdown.MarkdownIt", None):
+        with pytest.raises(ImportError):
+            MarkdownSplitter()
+
+def test_empty_and_whitespace_text():
+    """Tests that the splitter handles empty or whitespace-only text gracefully."""
+    splitter = MarkdownSplitter()
+    assert splitter.split_text("") == []
+    assert splitter.split_text("   \n \t ") == []
+
+def test_private_methods():
+    """Tests the private helper methods directly."""
+    splitter = MarkdownSplitter()
+    text = "line 1\nline 2"
+    line_indices = splitter._get_line_start_indices(text)
+
+    # Mock SyntaxTreeNode
+    node = patch("text_segmentation.strategies.structure.markdown.SyntaxTreeNode").start()
+    node.map = (0, 2)
+    node.children = []
+
+    # Test _get_node_text
+    content, start, end = splitter._get_node_text(node, text, line_indices)
+    assert content == text
+    assert start == 0
+    assert end == len(text)
+
+    # Test _get_nodes_text
+    content, start, end = splitter._get_nodes_text([node], text, line_indices)
+    assert content == text
+    assert start == 0
+    assert end == len(text)
