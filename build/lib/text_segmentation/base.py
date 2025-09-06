@@ -108,42 +108,49 @@ class TextSplitter(ABC):
             ]
         else:
             # Create a new list of copies to avoid modifying original chunk objects
-            # in case they are referenced elsewhere.
-            original_chunks = [copy.copy(c) for c in chunks]
-            merged_chunks: List[Chunk] = []
+            merged_chunks = [copy.copy(c) for c in chunks]
 
             if self.min_chunk_merge_strategy == "merge_with_previous":
-                for chunk in original_chunks:
-                    is_runt = self.length_function(chunk.content) < self.minimum_chunk_size
-                    can_merge = merged_chunks and (self.length_function(merged_chunks[-1].content) + self.length_function(chunk.content)) <= self.chunk_size
-
-                    if is_runt and can_merge:
-                        # Merge this small chunk with the previous one
-                        last_chunk = merged_chunks[-1]
-                        last_chunk.content += chunk.content
-                        last_chunk.end_index = chunk.end_index
-                    else:
-                        merged_chunks.append(chunk)
+                # Iterate forward and merge runts with the previous chunk.
+                i = 1
+                while i < len(merged_chunks):
+                    if self.length_function(merged_chunks[i].content) < self.minimum_chunk_size:
+                        prev_chunk = merged_chunks[i-1]
+                        current_chunk = merged_chunks[i]
+                        if (self.length_function(prev_chunk.content) + self.length_function(current_chunk.content)) <= self.chunk_size:
+                            prev_chunk.content += current_chunk.content
+                            prev_chunk.end_index = current_chunk.end_index
+                            merged_chunks.pop(i)
+                            # After merging, stay at the same index `i` in case the
+                            # next chunk is also a runt that needs to be merged into
+                            # the same previous chunk.
+                            continue
+                    i += 1
+                # Fallback for a runt at the beginning of the list.
+                if len(merged_chunks) > 1 and self.length_function(merged_chunks[0].content) < self.minimum_chunk_size:
+                    if (self.length_function(merged_chunks[0].content) + self.length_function(merged_chunks[1].content)) <= self.chunk_size:
+                        merged_chunks[1].content = merged_chunks[0].content + merged_chunks[1].content
+                        merged_chunks[1].start_index = merged_chunks[0].start_index
+                        merged_chunks.pop(0)
 
             elif self.min_chunk_merge_strategy == "merge_with_next":
-                i = 0
-                while i < len(original_chunks):
-                    current_chunk = original_chunks[i]
-                    is_runt = self.length_function(current_chunk.content) < self.minimum_chunk_size
-                    can_merge = (i + 1) < len(original_chunks) and (self.length_function(current_chunk.content) + self.length_function(original_chunks[i+1].content)) <= self.chunk_size
-
-                    if is_runt and can_merge:
-                        # Merge this small chunk with the next one
-                        next_chunk = original_chunks[i + 1]
-                        current_chunk.content += next_chunk.content
-                        current_chunk.end_index = next_chunk.end_index
-                        # Remove the merged chunk from our perspective
-                        original_chunks.pop(i + 1)
-                        # Stay at the current index to re-evaluate the merged chunk
-                        continue
-
-                    merged_chunks.append(current_chunk)
-                    i += 1
+                # Iterate backward and merge runts with the next chunk.
+                i = len(merged_chunks) - 2
+                while i >= 0:
+                    if self.length_function(merged_chunks[i].content) < self.minimum_chunk_size:
+                        current_chunk = merged_chunks[i]
+                        next_chunk = merged_chunks[i+1]
+                        if (self.length_function(current_chunk.content) + self.length_function(next_chunk.content)) <= self.chunk_size:
+                            next_chunk.content = current_chunk.content + next_chunk.content
+                            next_chunk.start_index = current_chunk.start_index
+                            merged_chunks.pop(i)
+                    i -= 1
+                # Fallback for a runt at the end of the list.
+                if len(merged_chunks) > 1 and self.length_function(merged_chunks[-1].content) < self.minimum_chunk_size:
+                    if (self.length_function(merged_chunks[-1].content) + self.length_function(merged_chunks[-2].content)) <= self.chunk_size:
+                        merged_chunks[-2].content += merged_chunks[-1].content
+                        merged_chunks[-2].end_index = merged_chunks[-1].end_index
+                        merged_chunks.pop(-1)
 
         # Re-assign sequence numbers
         for i, chunk in enumerate(merged_chunks):
@@ -164,6 +171,11 @@ class TextSplitter(ABC):
 
         This method is called by concrete splitter implementations before chunking.
         """
+        # Remove the UTF-8 Byte-Order Mark (BOM) if it exists at the start of the text,
+        # as it can interfere with parsing and processing.
+        if text.startswith("\ufeff"):
+            text = text[1:]
+
         # Remove null bytes, as they can cause issues with many text processing tools.
         text = text.replace("\x00", "")
 

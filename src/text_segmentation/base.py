@@ -171,6 +171,11 @@ class TextSplitter(ABC):
 
         This method is called by concrete splitter implementations before chunking.
         """
+        # Remove the UTF-8 Byte-Order Mark (BOM) if it exists at the start of the text,
+        # as it can interfere with parsing and processing.
+        if text.startswith("\ufeff"):
+            text = text[1:]
+
         # Remove null bytes, as they can cause issues with many text processing tools.
         text = text.replace("\x00", "")
 
