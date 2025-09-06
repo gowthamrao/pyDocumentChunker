@@ -38,6 +38,15 @@ LANGUAGE_QUERIES: Dict[str, Set[str]] = {
         "impl_item",
         "trait_item",
     },
+    "java": {
+        "class_declaration",
+        "interface_declaration",
+        "method_declaration",
+        "constructor_declaration",
+        "enum_declaration",
+        "record_declaration",
+        "annotation_type_declaration",
+    },
     # Add other languages here
 }
 
