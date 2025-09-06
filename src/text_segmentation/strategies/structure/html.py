@@ -198,13 +198,17 @@ class HTMLSplitter(TextSplitter):
 
         flush_current_chunk()
 
-        # Post-process to add overlap metadata. This splitter doesn't have a native
-        # overlap concept, so we can't easily add it without significant refactoring.
-        # This remains a known gap against the FRD. A simple post-processing
-        # based on character indices would be misleading if there's no actual
-        # overlap in the logic.
+        # Post-process to add overlap metadata, fulfilling FRD requirements R-5.2.7
+        # and R-5.2.8. Even though this strategy doesn't create overlapping chunks
+        # by design, the fallback splitter does, and runt merging can also
+        # introduce overlaps. Therefore, this step is essential for consistency.
+        from text_segmentation.utils import _populate_overlap_metadata
+        _populate_overlap_metadata(chunks, text)
 
-        final_chunks = self._enforce_minimum_chunk_size(chunks)
-        for i, chunk in enumerate(final_chunks):
-            chunk.sequence_number = i
+        # Enforce the minimum chunk size. This call now includes the original text
+        # so that it can correctly recalculate overlap metadata after merging runts.
+        final_chunks = self._enforce_minimum_chunk_size(chunks, text)
+
+        # The sequence numbers are re-assigned within _enforce_minimum_chunk_size,
+        # so we can just return the result.
         return final_chunks
