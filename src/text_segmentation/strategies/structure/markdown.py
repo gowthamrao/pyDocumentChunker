@@ -114,11 +114,15 @@ class MarkdownSplitter(TextSplitter):
             if self.length_function(block_content) > self.chunk_size:
                 fallback_chunks = self._fallback_splitter.split_text(block_content)
                 for fb_chunk in fallback_chunks:
-                    # Approximating start/end index for fallback chunks
+                    # Correct the indices of the fallback chunks to be relative to the
+                    # original document by adding the start offset of the block.
+                    corrected_start_index = block_start + fb_chunk.start_index
+                    corrected_end_index = block_start + fb_chunk.end_index
+
                     chunks.append(Chunk(
                         content=fb_chunk.content,
-                        start_index=block_start,
-                        end_index=block_end,
+                        start_index=corrected_start_index,
+                        end_index=corrected_end_index,
                         sequence_number=sequence_number,
                         source_document_id=source_document_id,
                         hierarchical_context=block_context.copy(),
