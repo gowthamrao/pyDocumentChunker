@@ -85,10 +85,10 @@ class MarkdownSplitter(TextSplitter):
 
     def _extract_blocks(
         self, text: str
-    ) -> List[Tuple[str, Dict[str, Any], int, int]]:
+    ) -> List[Tuple[str, Dict[str, Any], int, int, str]]:
         """
         Pass 1: Parse the document and create a flat list of semantic blocks
-        with their content, context, and character indices.
+        with their content, context, character indices, and block type.
         """
         tokens = self.md_parser.parse(text)
         root_node = SyntaxTreeNode(tokens)
@@ -105,6 +105,7 @@ class MarkdownSplitter(TextSplitter):
             start_char = line_indices[start_line]
             end_char = line_indices[end_line] if end_line < len(line_indices) else len(text)
             content = text[start_char:end_char]
+            block_type = node.type
 
             if node.type == "heading":
                 level = int(node.tag[1:])
@@ -116,7 +117,7 @@ class MarkdownSplitter(TextSplitter):
                 header_context[f"H{level}"] = header_content
 
             if content.strip():
-                blocks.append((content, header_context.copy(), start_char, end_char))
+                blocks.append((content, header_context.copy(), start_char, end_char, block_type))
 
         return blocks
 
@@ -128,14 +129,14 @@ class MarkdownSplitter(TextSplitter):
         if not processed_text.strip():
             return []
 
-        # Pass 1: Extract all semantic blocks with their context.
+        # Pass 1: Extract all semantic blocks with their context and type.
         blocks = self._extract_blocks(processed_text)
         if not blocks:
             return []
 
         # Pass 2: Group blocks into chunks.
         chunks: List[Chunk] = []
-        current_chunk_blocks: List[Tuple[str, Dict[str, Any], int, int]] = []
+        current_chunk_blocks: List[Tuple[str, Dict[str, Any], int, int, str]] = []
 
         for block in blocks:
             # If the current chunk is empty, start it with the current block.
@@ -143,48 +144,45 @@ class MarkdownSplitter(TextSplitter):
                 current_chunk_blocks.append(block)
                 continue
 
-            # Get the combined text if we were to add the new block
+            # Get data from the running chunk and the new block
             potential_text = "".join(b[0] for b in current_chunk_blocks) + block[0]
-
-            # Get the context of the running chunk and the new block
             current_context = current_chunk_blocks[-1][1]
+            current_block_type = current_chunk_blocks[-1][4]
             new_context = block[1]
+            new_block_type = block[4]
 
-            # Check for a "context boundary". This happens if the new block starts
-            # a new section that shouldn't be merged with the current one.
-            context_boundary = False
+            # --- Boundary Condition Checks ---
+            # Condition 1: The combined text exceeds the chunk size.
+            size_boundary = self.length_function(potential_text) > self.chunk_size
+
+            # Condition 2: The new block starts a new major section (e.g., H2 after H2).
+            header_boundary = False
             if new_context != current_context:
-                # A new header always defines a new context. The question is whether
-                # to merge it with the previous content or create a new chunk.
-                # We create a new chunk if the new header is of the same or higher
-                # level (e.g., H2 followed by H2, or H2 followed by H1).
-
-                # Find the level of the header that defines the new block's context.
-                new_header_level = 0
-                for key in new_context:
-                    if key not in current_context:
-                        new_header_level = int(key[1:])
-                        break
-
-                # Find the level of the header that defines the current chunk's context
-                current_header_level = 0
-                for key in current_context:
-                    if key not in new_context:
-                        current_header_level = int(key[1:])
-                        break
-
-                # If there's no clear level change, default to the deepest level.
-                if new_header_level == 0:
-                    new_header_level = max((int(k[1:]) for k in new_context), default=99)
-                if current_header_level == 0:
-                    current_header_level = max((int(k[1:]) for k in current_context), default=99)
-
+                new_header_level = max((int(k[1:]) for k in new_context if k.startswith('H')), default=99)
+                current_header_level = max((int(k[1:]) for k in current_context if k.startswith('H')), default=99)
                 if new_header_level <= current_header_level:
-                    context_boundary = True
+                    header_boundary = True
 
-            # If adding the new block exceeds size, or we cross a context boundary,
-            # finalize the current chunk.
-            if (self.length_function(potential_text) > self.chunk_size) or context_boundary:
+            # Condition 3: The block type changes (e.g., paragraph -> bullet_list).
+            # We don't want to split on every paragraph, so we allow paragraph->paragraph.
+            type_boundary = (
+                current_block_type != new_block_type and
+                not (current_block_type == "paragraph" and new_block_type == "paragraph")
+            )
+            # Edge case: A heading should always be grouped with the content that immediately
+            # follows it, so we don't create a type boundary after a heading.
+            if current_block_type == "heading":
+                type_boundary = False
+
+
+            # --- Boundary Condition Checks ---
+            # A heading should always be merged with the content that follows it.
+            is_header_only_chunk = len(current_chunk_blocks) == 1 and current_chunk_blocks[0][4] == 'heading'
+
+            # If any boundary condition is met, finalize the current chunk.
+            # EXCEPTION: Never split a header from its content due to size.
+            # The oversized chunk will be handled by the fallback mechanism.
+            if (size_boundary and not is_header_only_chunk) or header_boundary or type_boundary:
                 chunk_content = "".join(b[0] for b in current_chunk_blocks)
                 start_index = current_chunk_blocks[0][2]
                 end_index = current_chunk_blocks[-1][3]
@@ -223,22 +221,28 @@ class MarkdownSplitter(TextSplitter):
         final_chunks: List[Chunk] = []
         for chunk in chunks:
             if self.length_function(chunk.content) > self.chunk_size:
-                # This chunk is too big, and was formed by grouping smaller blocks.
-                # We need to split it using a fallback mechanism.
+                # This chunk, likely a single large block, is too big.
+                # We need to split it using the fallback mechanism.
+                # The fallback splitter will return chunks with indices relative to `chunk.content`.
+                # We must correct them to be relative to the original `processed_text`.
                 fallback_chunks = self._fallback_splitter.split_text(chunk.content)
                 for fb_chunk in fallback_chunks:
+                    # Correct the indices of the fallback chunk
+                    fb_start_index = chunk.start_index + fb_chunk.start_index
+                    fb_end_index = chunk.start_index + fb_chunk.end_index
+
                     final_chunks.append(Chunk(
                         content=fb_chunk.content,
-                        start_index=chunk.start_index + fb_chunk.start_index,
-                        end_index=chunk.start_index + fb_chunk.end_index,
-                        sequence_number=len(final_chunks), # Assign sequence number immediately
+                        start_index=fb_start_index,
+                        end_index=fb_end_index,
+                        sequence_number=len(final_chunks),
                         source_document_id=source_document_id,
                         hierarchical_context=chunk.hierarchical_context,
                         chunking_strategy_used="markdown-fallback"
                     ))
             else:
                 # This chunk is already valid.
-                chunk.sequence_number = len(final_chunks) # Assign correct sequence number
+                chunk.sequence_number = len(final_chunks)
                 final_chunks.append(chunk)
 
         from text_segmentation.utils import _populate_overlap_metadata
