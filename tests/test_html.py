@@ -59,16 +59,50 @@ def test_html_hierarchical_context():
 
 
 @pytest.mark.skipif(not BS4_LXML_AVAILABLE, reason="BeautifulSoup4 or lxml not installed")
-def test_html_stripping_tags():
-    """Tests that irrelevant tags like <script> are stripped."""
-    text_with_script = f'<body><p>Some content.</p><script>alert("you are hacked");</script></body>'
-    splitter = HTMLSplitter()
-    chunks = splitter.split_text(text_with_script)
+def test_html_remove_tags():
+    """Tests that the `remove_tags` parameter correctly strips specified tags."""
+    text_with_script = f'<body><p>Some content.</p><script>alert("you are hacked");</script><footer>Footer</footer></body>'
+    # Test with default removal list, which includes 'footer'
+    splitter_default = HTMLSplitter()
+    chunks_default = splitter_default.split_text(text_with_script)
+    assert "alert" not in chunks_default[0].content
+    assert "Footer" not in chunks_default[0].content
 
-    assert len(chunks) == 1
-    assert "<script>" not in chunks[0].content
-    assert "alert" not in chunks[0].content
-    assert chunks[0].content.strip() == "Some content."
+    # Test with custom removal list. For 'Footer' to be found, 'footer' must also
+    # be considered a block tag. We set a chunk_size that is smaller than the
+    # combined blocks but larger than the first block to force a split.
+    splitter_custom = HTMLSplitter(
+        chunk_size=15,
+        chunk_overlap=0,
+        remove_tags=["script"],
+        block_tags=["p", "footer"]
+    )
+    chunks_custom = splitter_custom.split_text(text_with_script)
+    # The content should now be two separate chunks
+    assert len(chunks_custom) == 2
+    assert chunks_custom[0].content == "Some content."
+    assert chunks_custom[1].content == "Footer"
+
+
+@pytest.mark.skipif(not BS4_LXML_AVAILABLE, reason="BeautifulSoup4 or lxml not installed")
+def test_html_strip_all_tags_mode():
+    """Tests the `strip_all_tags=True` mode for plain text splitting."""
+    splitter = HTMLSplitter(
+        chunk_size=30,
+        chunk_overlap=0, # Set to 0 to allow for clean join assertion
+        strip_all_tags=True
+    )
+    chunks = splitter.split_text(HTML_TEXT)
+    # The <head> tag, which contains "Test Page", is stripped by default.
+    full_text = "Main Title This is the introduction. Section 1 Here is the content for the first section. List item 1 List item 2 Section 2 This is the second section."
+
+    assert len(chunks) > 1
+    # This assertion is robust: it checks that no HTML is left and that the
+    # combined content is correct, without being brittle about exact split points.
+    for chunk in chunks:
+        assert "<" not in chunk.content and ">" not in chunk.content
+    # We join and replace spaces to make the comparison robust to minor whitespace diffs
+    assert "".join(c.content for c in chunks).replace(" ", "") == full_text.replace(" ", "")
 
 @pytest.mark.skipif(not BS4_LXML_AVAILABLE, reason="BeautifulSoup4 or lxml not installed")
 def test_html_start_index_correctness():

@@ -25,3 +25,6 @@ nltk>=3.8
 
 [semantic]
 numpy>=1.26
+
+[spacy]
+spacy>=3.7.0
