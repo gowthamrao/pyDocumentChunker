@@ -20,6 +20,7 @@ src/text_segmentation/strategies/fixed_size.py
 src/text_segmentation/strategies/recursive.py
 src/text_segmentation/strategies/semantic.py
 src/text_segmentation/strategies/sentence.py
+src/text_segmentation/strategies/spacy_sentence.py
 src/text_segmentation/strategies/structure/__init__.py
 src/text_segmentation/strategies/structure/html.py
 src/text_segmentation/strategies/structure/markdown.py
@@ -33,4 +34,5 @@ tests/test_recursive_regex.py
 tests/test_runt_handling.py
 tests/test_semantic.py
 tests/test_sentence.py
+tests/test_spacy_sentence.py
 tests/test_tokenizers.py
