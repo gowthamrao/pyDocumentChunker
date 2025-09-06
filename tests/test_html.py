@@ -121,3 +121,53 @@ def test_html_start_index_correctness():
 
         # Check if the beginning of the chunk's content appears in the window
         assert chunk.content.split()[0] in window
+
+@pytest.mark.skipif(not BS4_LXML_AVAILABLE, reason="BeautifulSoup4 or lxml not installed")
+def test_html_parser_fallback(monkeypatch):
+    """
+    Tests that the splitter falls back to lxml if html5lib fails.
+    """
+    from bs4 import BeautifulSoup as OriginalBeautifulSoup
+
+    def mock_beautiful_soup(*args, **kwargs):
+        if 'html5lib' in args or kwargs.get('features') == 'html5lib':
+            raise Exception("html5lib failed")
+        return OriginalBeautifulSoup(*args, **kwargs)
+
+    monkeypatch.setattr("text_segmentation.strategies.structure.html.BeautifulSoup", mock_beautiful_soup)
+
+    splitter = HTMLSplitter()
+    # This should not raise an exception because it falls back to lxml
+    chunks = splitter.split_text(HTML_TEXT)
+    assert len(chunks) > 0
+
+@pytest.mark.skipif(not BS4_LXML_AVAILABLE, reason="BeautifulSoup4 or lxml not installed")
+def test_empty_and_whitespace_html():
+    """Tests that the splitter handles empty or whitespace-only HTML gracefully."""
+    splitter = HTMLSplitter()
+    assert splitter.split_text("") == []
+    assert splitter.split_text("   \n \t ") == []
+    assert splitter.split_text("<html><body></body></html>") == []
+
+@pytest.mark.skipif(not BS4_LXML_AVAILABLE, reason="BeautifulSoup4 or lxml not installed")
+def test_empty_block_tags_are_ignored():
+    """Tests that empty block tags do not create empty chunks."""
+    text = "<h1>Title</h1><p></p><p>  </p><h2>Subtitle</h2>"
+    splitter = HTMLSplitter()
+    chunks = splitter.split_text(text)
+    assert len(chunks) == 1
+    assert "Title" in chunks[0].content
+    assert "Subtitle" in chunks[0].content
+
+@pytest.mark.skipif(not BS4_LXML_AVAILABLE, reason="BeautifulSoup4 or lxml not installed")
+def test_oversized_block_uses_fallback():
+    """Tests that a block larger than chunk_size is split by the fallback."""
+    text = f"<p>{'a' * 50}</p><p>{'b' * 50}</p>"
+    splitter = HTMLSplitter(chunk_size=40, chunk_overlap=10)
+    chunks = splitter.split_text(text)
+    # Each <p> tag is oversized and should be split by the fallback.
+    assert len(chunks) == 4 # 2 for each <p> tag
+    assert chunks[0].content == 'a' * 40
+    assert chunks[1].content.startswith('a' * 10)
+    assert chunks[2].content == 'b' * 40
+    assert chunks[3].content.startswith('b' * 10)

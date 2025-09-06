@@ -65,6 +65,9 @@ class SemanticSplitter(TextSplitter):
         self.embedding_function = embedding_function
         self.breakpoint_method = breakpoint_method
         self.breakpoint_threshold = breakpoint_threshold
+        if self.breakpoint_method == "percentile":
+            if not (0 <= self.breakpoint_threshold <= 100):
+                raise ValueError("Percentile threshold must be between 0 and 100.")
 
         # This splitter manages its own chunking logic, so we pass a default size
         # to the parent, but it won't be directly used for splitting.
@@ -127,8 +130,6 @@ class SemanticSplitter(TextSplitter):
 
         # 2. Determine the similarity threshold for a breakpoint.
         if self.breakpoint_method == "percentile":
-            if not (0 <= self.breakpoint_threshold <= 100):
-                raise ValueError("Percentile threshold must be between 0 and 100.")
             threshold = np.percentile(similarities, self.breakpoint_threshold)
         elif self.breakpoint_method == "std_dev":
             threshold = np.mean(similarities) - self.breakpoint_threshold * np.std(similarities)

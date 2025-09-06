@@ -8,16 +8,16 @@ from text_segmentation.utils import _populate_overlap_metadata
 # Attempt to import spacy and load the model.
 try:
     import spacy
-    # We use a lightweight model by default.
-    try:
-        NLP = spacy.load("en_core_web_sm")
-    except OSError:
-        raise ImportError(
-            "Spacy model 'en_core_web_sm' not found. Please run "
-            "'python -m spacy download en_core_web_sm' to install it."
-        ) from None
+    NLP = spacy.load("en_core_web_sm")
 except ImportError:
+    # This will catch if spacy is not installed.
     NLP = None
+except OSError:
+    # This will catch if the model is not found.
+    raise ImportError(
+        "Spacy model 'en_core_web_sm' not found. Please run "
+        "'python -m spacy download en_core_web_sm' to install it."
+    ) from None
 
 
 class SpacySentenceSplitter(TextSplitter):

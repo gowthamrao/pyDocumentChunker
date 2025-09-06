@@ -114,7 +114,7 @@ class CodeSplitter(TextSplitter):
     ) -> List[Chunk]:
         """Splits the source code using its syntax tree."""
         text = self._preprocess(text)
-        if not text:
+        if not text.strip():
             return []
 
         text_bytes = text.encode("utf-8")

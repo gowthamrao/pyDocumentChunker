@@ -31,6 +31,8 @@ tests/test_code_java.py
 tests/test_core.py
 tests/test_fixed_size.py
 tests/test_html.py
+tests/test_langchain.py
+tests/test_llamaindex.py
 tests/test_markdown_hierarchical.py
 tests/test_markdown_new.py
 tests/test_recursive.py

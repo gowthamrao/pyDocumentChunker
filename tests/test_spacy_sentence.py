@@ -153,6 +153,31 @@ def test_import_error_if_spacy_not_installed(monkeypatch):
     """
     Tests that SpacySentenceSplitter raises an ImportError if spacy is not installed.
     """
-    monkeypatch.setattr("text_segmentation.strategies.spacy_sentence.NLP", None)
+    import sys
+    import importlib
+
+    monkeypatch.setitem(sys.modules, "spacy", None)
+
+    from text_segmentation.strategies import spacy_sentence
+
+    # Reloading the module should now set NLP to None
+    importlib.reload(spacy_sentence)
+    assert spacy_sentence.NLP is None
+
+    # The error is raised at initialization
     with pytest.raises(ImportError, match="Spacy is not installed"):
-        SpacySentenceSplitter()
+        spacy_sentence.SpacySentenceSplitter()
+
+def test_model_not_found_error(monkeypatch):
+    """Tests an informative error is raised if the model is not downloaded."""
+    import importlib
+    from text_segmentation.strategies import spacy_sentence
+
+    def mock_load_error(model_name):
+        raise OSError(f"Can't find model '{model_name}'.")
+
+    # Patch spacy.load within the spacy_sentence module's namespace
+    monkeypatch.setattr(spacy_sentence.spacy, "load", mock_load_error)
+
+    with pytest.raises(ImportError, match="Spacy model 'en_core_web_sm' not found"):
+        importlib.reload(spacy_sentence)
