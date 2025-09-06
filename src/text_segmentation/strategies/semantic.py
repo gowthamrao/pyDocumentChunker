@@ -153,7 +153,9 @@ class SemanticSplitter(TextSplitter):
             if self.length_function(content) > self.chunk_size:
                 sub_chunks = self._fallback_splitter.split_text(content, source_document_id)
                 for sub_chunk in sub_chunks:
+                    # Adjust indices to be relative to the original document
                     sub_chunk.start_index += group_start_char_idx
+                    sub_chunk.end_index += group_start_char_idx
                     sub_chunk.sequence_number = sequence_number
                     final_chunks.append(sub_chunk)
                     sequence_number += 1
@@ -170,7 +172,9 @@ class SemanticSplitter(TextSplitter):
             if self.length_function(content) > self.chunk_size:
                  sub_chunks = self._fallback_splitter.split_text(content, source_document_id)
                  for sub_chunk in sub_chunks:
+                    # Adjust indices to be relative to the original document
                     sub_chunk.start_index += group_start_char_idx
+                    sub_chunk.end_index += group_start_char_idx
                     sub_chunk.sequence_number = sequence_number
                     final_chunks.append(sub_chunk)
                     sequence_number += 1
