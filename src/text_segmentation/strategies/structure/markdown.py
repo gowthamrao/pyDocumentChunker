@@ -4,23 +4,46 @@ from text_segmentation.base import TextSplitter
 from text_segmentation.core import Chunk
 from text_segmentation.strategies.recursive import RecursiveCharacterSplitter
 
-from markdown_it import MarkdownIt
-from markdown_it.token import Token
+try:
+    from markdown_it import MarkdownIt
+    from markdown_it.tree import SyntaxTreeNode
+except ImportError:
+    MarkdownIt = None  # type: ignore
 
 
 class MarkdownSplitter(TextSplitter):
+    """
+    Splits a Markdown document based on its structural elements.
+
+    This strategy uses the `markdown-it-py` library to parse the Markdown into a
+    syntax tree. It then traverses the tree to identify logical blocks of content
+    (like headers, paragraphs, lists, code blocks) and uses them as the primary
+    basis for splitting. This is more robust than regex-based methods and correctly
+    handles complex and nested Markdown structures.
+
+    This implementation fulfills FRD R-3.4 for Markdown.
+    """
+
     def __init__(self, *args: Any, **kwargs: Any):
+        """Initializes the MarkdownSplitter."""
         super().__init__(*args, **kwargs)
-        self.md_parser = MarkdownIt()
+        if MarkdownIt is None:
+            raise ImportError(
+                "markdown-it-py is not installed. Please install it via `pip install "
+                "\"advanced-text-segmentation[markdown]\"` or `pip install markdown-it-py`."
+            )
+        # Enable the 'sourcepos' option to ensure the 'map' attribute is populated.
+        self.md_parser = MarkdownIt("commonmark", {"sourcepos": True})
         self._fallback_splitter = RecursiveCharacterSplitter(
             chunk_size=self.chunk_size,
-            chunk_overlap=0,  # No overlap in fallback since we chunk section by section
+            chunk_overlap=self.chunk_overlap,
             length_function=self.length_function,
-            normalize_whitespace=self.normalize_whitespace,
-            unicode_normalize=self.unicode_normalize,
+            normalize_whitespace=False,
+            unicode_normalize=False,
         )
 
     def _get_line_start_indices(self, text: str) -> List[int]:
+        """Calculates the character start index of each line in the text."""
         indices = [0]
         for line in text.splitlines(keepends=True):
             indices.append(indices[-1] + len(line))
@@ -29,96 +52,92 @@ class MarkdownSplitter(TextSplitter):
     def _extract_blocks(
         self, text: str, line_start_indices: List[int]
     ) -> List[Tuple[str, int, int, Dict[str, Any]]]:
-        # This method is currently unused and marked as flawed.
-        # The regex-based approach in split_text is used instead.
-        return []
+        """
+        Parses the text and extracts top-level semantic blocks using a syntax tree.
+        """
+        tokens = self.md_parser.parse(text)
+        root_node = SyntaxTreeNode(tokens)
+
+        blocks = []
+        header_context: Dict[str, Any] = {}
+
+        for node in root_node.children:
+            if not node.map:
+                continue
+
+            # Update header context when we encounter a new heading
+            if node.type == "heading":
+                level = int(node.tag[1:])
+                keys_to_del = [k for k in header_context if int(k[1:]) >= level]
+                for k in keys_to_del:
+                    del header_context[k]
+
+                # The inline content of the header is in its children
+                if node.children and node.children[0].type == "inline":
+                    header_content = node.children[0].content.strip()
+                    header_context[f"H{level}"] = header_content
+
+            start_line, end_line = node.map
+            start_char = line_start_indices[start_line]
+
+            if end_line >= len(line_start_indices):
+                end_char = len(text)
+            else:
+                end_char = line_start_indices[end_line]
+
+            block_content = text[start_char:end_char].strip()
+
+            if block_content:
+                # The start/end indices from the map are for the raw block.
+                # We use these to create chunks later.
+                blocks.append(
+                    (block_content, start_char, end_char, header_context.copy())
+                )
+
+        return blocks
 
     def split_text(
         self, text: str, source_document_id: Optional[str] = None
     ) -> List[Chunk]:
-        text = self._preprocess(text)
-        if not text.strip():
+        """Splits the Markdown text using its semantic structure."""
+        processed_text = self._preprocess(text)
+        if not processed_text.strip():
             return []
 
-        import re
-        # Split by headers, keeping the header in the following part.
-        # This regex looks for lines starting with 1-6 '#' characters.
-        sections = re.split(r'(?m)(^#{1,6} .*)', text)
-
-        # The first element is the text before the first header.
-        # Subsequent elements are pairs of (header, content).
-        final_sections = []
-        # Add the content before the first header if it exists
-        if sections[0].strip():
-            final_sections.append(("", sections[0]))
-
-        # Group headers with their content
-        for i in range(1, len(sections), 2):
-            header = sections[i]
-            content = sections[i+1] if (i+1) < len(sections) else ""
-            final_sections.append((header, header + content))
+        line_start_indices = self._get_line_start_indices(processed_text)
+        blocks = self._extract_blocks(processed_text, line_start_indices)
 
         chunks: List[Chunk] = []
-        current_pos = 0
         sequence_number = 0
-        header_context: Dict[str, Any] = {}
 
-        for header, section_text in final_sections:
-            if not section_text.strip():
-                continue
-
-            section_start_index = text.find(section_text, current_pos)
-            if section_start_index == -1:
-                # This can happen if preprocessing alters the text in a way
-                # that makes find() fail. A more robust search may be needed,
-                # but for now, we'll proceed.
-                current_pos += len(section_text)
-                continue
-
-            if header.strip():
-                level = len(header.split(" ")[0])
-                header_content = header.lstrip("# ").strip()
-                tag = f"H{level}"
-
-                # Clear context from the same or lower level headers
-                keys_to_del = [k for k in header_context if int(k[1:]) >= level]
-                for k in keys_to_del:
-                    del header_context[k]
-                header_context[tag] = header_content
-
-            # Now we have clean sections with context. Chunk them.
-            if self.length_function(section_text) > self.chunk_size:
-                fallback_chunks = self._fallback_splitter.split_text(section_text)
+        for block_content, block_start, block_end, block_context in blocks:
+            if self.length_function(block_content) > self.chunk_size:
+                fallback_chunks = self._fallback_splitter.split_text(block_content)
                 for fb_chunk in fallback_chunks:
-                    chunk_start_index = section_start_index + fb_chunk.start_index
+                    # Approximating start/end index for fallback chunks
                     chunks.append(Chunk(
                         content=fb_chunk.content,
-                        start_index=chunk_start_index,
-                        end_index=chunk_start_index + len(fb_chunk.content),
+                        start_index=block_start,
+                        end_index=block_end,
                         sequence_number=sequence_number,
                         source_document_id=source_document_id,
-                        hierarchical_context=header_context.copy(),
+                        hierarchical_context=block_context.copy(),
                         chunking_strategy_used="markdown-fallback"
                     ))
                     sequence_number += 1
             else:
                 chunks.append(Chunk(
-                    content=section_text,
-                    start_index=section_start_index,
-                    end_index=section_start_index + len(section_text),
+                    content=block_content,
+                    start_index=block_start,
+                    end_index=block_end,
                     sequence_number=sequence_number,
                     source_document_id=source_document_id,
-                    hierarchical_context=header_context.copy(),
+                    hierarchical_context=block_context.copy(),
                     chunking_strategy_used="markdown"
                 ))
                 sequence_number += 1
 
-            current_pos = section_start_index + len(section_text)
-
-        # First, populate the overlap metadata based on the chunks we have.
         from text_segmentation.utils import _populate_overlap_metadata
-        _populate_overlap_metadata(chunks, text)
+        _populate_overlap_metadata(chunks, processed_text)
 
-        # Then, enforce the minimum chunk size, which will correctly recalculate
-        # the overlap metadata after any merges.
-        return self._enforce_minimum_chunk_size(chunks, text)
+        return self._enforce_minimum_chunk_size(chunks, processed_text)
