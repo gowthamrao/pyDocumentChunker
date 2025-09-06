@@ -41,14 +41,17 @@ class LlamaIndexWrapper(NodeParser):
             splitter: An instance of a text splitter from this package.
             callback_manager: LlamaIndex callback manager.
         """
+        super().__init__(
+            splitter=splitter, callback_manager=callback_manager, **kwargs
+        )
+
+    def _ensure_llamaindex_is_installed(self):
+        """Checks if llama-index-core is installed and raises an error if not."""
         if NodeParser is object:
             raise ImportError(
                 "llama-index-core is not installed. Please install it via `pip install "
                 "\"advanced-text-segmentation[llamaindex]\"` or `pip install llama-index-core`."
             )
-        super().__init__(
-            splitter=splitter, callback_manager=callback_manager, **kwargs
-        )
 
     @classmethod
     def from_defaults(
@@ -59,6 +62,7 @@ class LlamaIndexWrapper(NodeParser):
 
     def _chunk_to_node(self, chunk: Chunk, source_node: BaseNode) -> TextNode:
         """Converts a native Chunk object to a LlamaIndex TextNode."""
+        self._ensure_llamaindex_is_installed()
         metadata = chunk.to_dict()
         text = metadata.pop("content")
 
@@ -80,6 +84,7 @@ class LlamaIndexWrapper(NodeParser):
         """
         Parses a sequence of LlamaIndex nodes into more granular text nodes.
         """
+        self._ensure_llamaindex_is_installed()
         all_new_nodes: List[BaseNode] = []
         for source_node in nodes:
             text = source_node.get_content()

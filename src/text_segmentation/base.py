@@ -210,7 +210,7 @@ class TextSplitter(ABC):
         Returns:
             A list of `Chunk` objects, each representing a segment of the input text.
         """
-        pass
+        pass  # pragma: no cover
 
     def chunk(
         self, text: str, source_document_id: Optional[str] = None

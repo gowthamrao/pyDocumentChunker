@@ -57,6 +57,68 @@ def test_semantic_splitting_identifies_breakpoints():
     assert chunks[1].overlap_content_previous is None
 
 @pytest.mark.skipif(not NUMPY_AVAILABLE, reason="Numpy is not available")
+def test_semantic_splitting_std_dev():
+    """
+    Tests that the SemanticSplitter correctly identifies breakpoints using the
+    standard deviation method.
+    """
+    # Similarities: [1.0, 0.0, 0.0, 1.0]. Mean=0.5, Std=0.5.
+    # A threshold of 1.0 std dev below the mean is 0.0.
+    # Breakpoints should be triggered for similarities < 0.0.
+    # With a threshold of 0.9, the 0.0 similarities will be < (0.5 - 0.9*0.5) = 0.05
+    splitter = SemanticSplitter(
+        embedding_function=mock_embedding_function,
+        breakpoint_method="std_dev",
+        breakpoint_threshold=0.9
+    )
+    chunks = splitter.split_text(TEXT_FOR_SEMANTIC_SPLIT)
+    assert len(chunks) == 3
+
+@pytest.mark.skipif(not NUMPY_AVAILABLE, reason="Numpy is not available")
+def test_single_sentence_uses_fallback():
+    """
+    Tests that if only one sentence is present, the fallback splitter is used.
+    """
+    text = "This is a single sentence, but it is very long, so it should be split by the fallback mechanism."
+    splitter = SemanticSplitter(
+        embedding_function=mock_embedding_function,
+        chunk_size=50,
+        chunk_overlap=10
+    )
+    chunks = splitter.split_text(text)
+    # The fallback splitter should have been invoked.
+    assert len(chunks) > 1
+    assert len(chunks[0].content) <= 50
+
+@pytest.mark.skipif(not NUMPY_AVAILABLE, reason="Numpy is not available")
+def test_invalid_percentile_raises_error():
+    """
+    Tests that an invalid percentile value raises a ValueError.
+    """
+    with pytest.raises(ValueError, match="Percentile threshold must be between 0 and 100"):
+        SemanticSplitter(
+            embedding_function=mock_embedding_function,
+            breakpoint_method="percentile",
+            breakpoint_threshold=101
+        )
+
+@pytest.mark.skipif(not NUMPY_AVAILABLE, reason="Numpy is not available")
+def test_semantic_splitting_absolute():
+    """
+    Tests that the SemanticSplitter correctly identifies breakpoints using the
+    absolute value method.
+    """
+    # Similarities: [1.0, 0.0, 0.0, 1.0].
+    # Breakpoints should be triggered for similarities < 0.5.
+    splitter = SemanticSplitter(
+        embedding_function=mock_embedding_function,
+        breakpoint_method="absolute",
+        breakpoint_threshold=0.5
+    )
+    chunks = splitter.split_text(TEXT_FOR_SEMANTIC_SPLIT)
+    assert len(chunks) == 3
+
+@pytest.mark.skipif(not NUMPY_AVAILABLE, reason="Numpy is not available")
 def test_fallback_populates_overlap():
     """
     Tests that when a semantic chunk is too large and a fallback splitter with
@@ -96,10 +158,61 @@ def test_dependency_import_error():
     import sys
     import importlib
 
-    with patch.dict(sys.modules, {"numpy": None}):
+    try:
+        with patch.dict(sys.modules, {"numpy": None}):
+            import text_segmentation.strategies.semantic
+            importlib.reload(text_segmentation.strategies.semantic)
+
+            from text_segmentation.strategies.semantic import SemanticSplitter
+            with pytest.raises(ImportError, match="numpy is not installed"):
+                SemanticSplitter(embedding_function=lambda x: [])
+    finally:
+        # Restore the module to its original state
         import text_segmentation.strategies.semantic
         importlib.reload(text_segmentation.strategies.semantic)
 
-        from text_segmentation.strategies.semantic import SemanticSplitter
-        with pytest.raises(ImportError, match="numpy is not installed"):
-            SemanticSplitter(embedding_function=lambda x: [])
+@pytest.mark.skipif(not NUMPY_AVAILABLE, reason="Numpy is not available")
+def test_fallback_on_last_group():
+    """
+    Tests that the fallback splitter is correctly applied to the last group of
+    sentences if it is oversized.
+    """
+    # The last sentence is very long and will form its own group, which is oversized.
+    text = (
+        "This is a sentence about Topic A. "
+        "This is a very long sentence about Topic B that will exceed the chunk size."
+    )
+    splitter = SemanticSplitter(
+        embedding_function=mock_embedding_function,
+        breakpoint_method="absolute",
+        breakpoint_threshold=0.5,
+        chunk_size=50,
+        chunk_overlap=10
+    )
+    chunks = splitter.split_text(text)
+    # The first sentence is one chunk.
+    # The second sentence is split into multiple chunks by the fallback.
+    assert len(chunks) > 2
+    assert chunks[0].content == "This is a sentence about Topic A."
+    assert "Topic B" in chunks[1].content
+
+@pytest.mark.skipif(not NUMPY_AVAILABLE, reason="Numpy is not available")
+def test_fallback_on_intermediate_group():
+    """
+    Tests that the fallback splitter is correctly applied to an intermediate group.
+    """
+    text = (
+        "This is a very long sentence about Topic A that will exceed the chunk size. "
+        "This is a sentence about Topic B."
+    )
+    splitter = SemanticSplitter(
+        embedding_function=mock_embedding_function,
+        breakpoint_method="absolute",
+        breakpoint_threshold=0.5,
+        chunk_size=50,
+        chunk_overlap=10
+    )
+    chunks = splitter.split_text(text)
+    assert len(chunks) > 2
+    assert "Topic A" in chunks[0].content
+    assert "Topic B" in chunks[-1].content

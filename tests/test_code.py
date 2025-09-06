@@ -110,3 +110,30 @@ def test_unsupported_language_raises_error():
     """
     with pytest.raises(ValueError, match="is not supported or could not be loaded"):
         CodeSplitter(language="not_a_real_language")
+
+def test_import_error_if_tree_sitter_not_installed(monkeypatch):
+    """
+    Tests that an ImportError is raised if tree-sitter is not installed.
+    """
+    monkeypatch.setattr("text_segmentation.strategies.code.Parser", None)
+    with pytest.raises(ImportError, match="tree-sitter is not installed"):
+        CodeSplitter(language="python")
+
+def test_empty_and_whitespace_code():
+    """Tests that empty or whitespace-only code returns an empty list."""
+    splitter = CodeSplitter(language="python")
+    assert splitter.split_text("") == []
+    assert splitter.split_text("   \n \t ") == []
+
+def test_no_chunkable_nodes_uses_fallback():
+    """
+    Tests that if no high-level chunkable nodes are found, the fallback
+    splitter is used on the entire file.
+    """
+    # This Python code only contains simple statements, no functions or classes.
+    code = "a = 1\nb = 2\nprint(a + b)"
+    splitter = CodeSplitter(language="python", chunk_size=10, chunk_overlap=5)
+    chunks = splitter.split_text(code)
+    # The fallback should have been used.
+    assert len(chunks) > 1
+    assert chunks[0].content.strip() == "a = 1"
