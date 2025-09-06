@@ -180,4 +180,4 @@ class SemanticSplitter(TextSplitter):
         # Post-process to add overlap metadata using the shared utility.
         _populate_overlap_metadata(final_chunks, text)
 
-        return self._enforce_minimum_chunk_size(final_chunks)
+        return self._enforce_minimum_chunk_size(final_chunks, text)
