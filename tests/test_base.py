@@ -131,3 +131,44 @@ class TestBaseFunctionality:
         chunks = splitter.split_text(text)
         assert "\x00" not in chunks[0].content
         assert chunks[0].content == "This text contains a null byte."
+
+    def test_runt_handling_at_boundaries(self):
+        """
+        Tests that runts at the beginning or end of a list are handled correctly,
+        even if the primary merge direction is not possible.
+        """
+        # --- Test 'merge_with_next' for a runt at the END ---
+        c_normal_1 = Chunk(content="This is a normal chunk.", start_index=0, end_index=23, sequence_number=0)
+        c_runt_1 = Chunk(content=" Runt.", start_index=23, end_index=29, sequence_number=1)
+        text_1 = c_normal_1.content + c_runt_1.content
+
+        splitter_next = FixedSizeSplitter(
+            chunk_size=100,
+            chunk_overlap=0,
+            minimum_chunk_size=10, # Runt is len 6
+            min_chunk_merge_strategy="merge_with_next"
+        )
+        chunks_next = splitter_next._enforce_minimum_chunk_size([c_normal_1, c_runt_1], text_1)
+
+        assert len(chunks_next) == 1, "Runt at the end should have merged with previous"
+        assert chunks_next[0].content == "This is a normal chunk. Runt."
+        assert chunks_next[0].start_index == 0
+        assert chunks_next[0].end_index == 29
+
+        # --- Test 'merge_with_previous' for a runt at the BEGINNING ---
+        c_runt_2 = Chunk(content="Runt. ", start_index=0, end_index=6, sequence_number=0)
+        c_normal_2 = Chunk(content="This is a normal chunk.", start_index=6, end_index=29, sequence_number=1)
+        text_2 = c_runt_2.content + c_normal_2.content
+
+        splitter_prev = FixedSizeSplitter(
+            chunk_size=100,
+            chunk_overlap=0,
+            minimum_chunk_size=10, # Runt is len 6
+            min_chunk_merge_strategy="merge_with_previous"
+        )
+        chunks_prev = splitter_prev._enforce_minimum_chunk_size([c_runt_2, c_normal_2], text_2)
+
+        assert len(chunks_prev) == 1, "Runt at the beginning should have merged with next"
+        assert chunks_prev[0].content == "Runt. This is a normal chunk."
+        assert chunks_prev[0].start_index == 0
+        assert chunks_prev[0].end_index == 29
