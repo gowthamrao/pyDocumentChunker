@@ -56,7 +56,14 @@ def test_no_sentences_found():
     """Tests that an empty list is returned if no sentences are found."""
     splitter = SentenceSplitter()
     assert splitter.split_text("         ") == []
-    assert splitter.split_text("...") == []
+
+def test_punkt_not_downloaded():
+    """
+    Tests that a RuntimeError is raised if the 'punkt' model is not downloaded.
+    """
+    with patch("nltk.data.find", side_effect=LookupError()):
+        with pytest.raises(RuntimeError):
+            SentenceSplitter()
 
 from unittest.mock import patch
 

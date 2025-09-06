@@ -1,4 +1,4 @@
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from text_segmentation.base import TextSplitter as AdvancedTextSplitter
 from text_segmentation.core import Chunk
@@ -34,19 +34,22 @@ class LangChainWrapper(LangChainTextSplitter):
                 base TextSplitter, although they are not used by this wrapper's
                 core logic.
         """
+        # We don't call super().__init__ with splitter args, as the wrapped
+        # splitter already has them. We pass LangChain's expected args.
+        super().__init__(**kwargs)
+        self.splitter = splitter
+
+    def _ensure_langchain_is_installed(self):
+        """Checks if langchain-core is installed and raises an error if not."""
         if LangChainTextSplitter is object:
             raise ImportError(
                 "langchain-core is not installed. Please install it via `pip install "
                 "\"advanced-text-segmentation[langchain]\"` or `pip install langchain-core`."
             )
 
-        # We don't call super().__init__ with splitter args, as the wrapped
-        # splitter already has them. We pass LangChain's expected args.
-        super().__init__(**kwargs)
-        self.splitter = splitter
-
     def _chunk_to_document(self, chunk: Chunk) -> Document:
         """Converts a native Chunk object to a LangChain Document."""
+        self._ensure_langchain_is_installed()
         # The main content goes into page_content.
         # All other rich metadata from the chunk goes into the metadata dict.
         metadata = chunk.to_dict()
@@ -72,6 +75,7 @@ class LangChainWrapper(LangChainTextSplitter):
         """
         Create LangChain Document objects from a list of texts.
         """
+        self._ensure_langchain_is_installed()
         documents = []
         # If no metadatas are provided, create a list of empty dicts
         metadatas = metadatas or ([{}] * len(texts))
@@ -96,6 +100,7 @@ class LangChainWrapper(LangChainTextSplitter):
 
     def split_documents(self, documents: List[Document]) -> List[Document]:
         """Split a list of LangChain Documents, preserving metadata."""
+        self._ensure_langchain_is_installed()
         texts = [doc.page_content for doc in documents]
         metadatas = [doc.metadata for doc in documents]
         return self.create_documents(texts, metadatas=metadatas)

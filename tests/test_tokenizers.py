@@ -1,4 +1,5 @@
 import pytest
+from unittest.mock import patch
 
 from text_segmentation.strategies.recursive import RecursiveCharacterSplitter
 from text_segmentation.tokenizers import from_tiktoken
@@ -63,6 +64,10 @@ def test_from_tiktoken_caching():
     Tests that the from_tiktoken utility caches the length function.
     """
     try:
+        # Clear cache for a clean test
+        from text_segmentation import tokenizers
+        tokenizers._tokenizer_cache.clear()
+
         func1 = from_tiktoken("cl100k_base")
         func2 = from_tiktoken("cl100k_base")
         assert func1 is func2, "The from_tiktoken function should return the same cached object"
@@ -70,3 +75,12 @@ def test_from_tiktoken_caching():
         pytest.skip("tiktoken is not installed, skipping token-based test.")
     except Exception:
         pytest.skip("Could not load tiktoken model, skipping token-based test.")
+
+def test_from_tiktoken_import_error():
+    """Tests that an ImportError is raised if tiktoken is not installed."""
+    from text_segmentation import tokenizers
+    tokenizers._tokenizer_cache.clear()
+
+    with patch.dict("sys.modules", {"tiktoken": None}):
+        with pytest.raises(ImportError):
+            from_tiktoken("cl100k_base")
