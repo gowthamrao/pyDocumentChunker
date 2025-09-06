@@ -7,7 +7,7 @@ The package transforms large, unstructured or semi-structured documents into opt
 ## Core Features
 
 - **Multiple Chunking Strategies**: From simple fixed-size and recursive splitting to advanced, structure-aware, and semantic-based strategies.
-- **Rich Metadata**: Every chunk is enriched with detailed metadata, including its start and end position in the original document, hierarchical context, and more.
+- **Rich Metadata**: Every chunk is enriched with detailed metadata, including its start/end position, a unique ID, sequence number, hierarchical context, and even the exact content of the overlap with its neighbors.
 - **Framework Integration**: Seamless integration with popular RAG frameworks like LangChain and LlamaIndex.
 - **Highly Configurable**: All strategies are hyper-parameterized with sensible, research-backed defaults.
 - **Extensible Architecture**: The modular design makes it easy to implement, customize, and combine strategies.
@@ -47,7 +47,8 @@ All splitter classes inherit from a common `TextSplitter` base class and share a
 - `unicode_normalize` (str, default: `None`): Specifies a Unicode normalization form to apply (e.g., `'NFC'`, `'NFKC'`). Helps ensure consistent character representation.
 - `minimum_chunk_size` (int, default: `0`): If set, the splitter will attempt to handle chunks smaller than this size.
 - `min_chunk_merge_strategy` (str, default: `'merge_with_previous'`): Defines how to handle small chunks.
-    - `'merge_with_previous'`: Merges a small chunk with the one that came before it. If the first chunk is too small, it is kept as is.
+    - `'merge_with_previous'`: Merges a small chunk with the one that came before it.
+    - `'merge_with_next'`: Merges a small chunk with the one that comes after it.
     - `'discard'`: Simply removes any chunk smaller than `minimum_chunk_size`.
 
 ## Quick Start
@@ -130,7 +131,12 @@ chunks = splitter.split_text(my_html_text)
 ```
 
 ### SemanticSplitter
-Splits text by finding semantic breakpoints between sentences using an embedding model. Requires the `[semantic]` extra.
+Splits text by finding semantic breakpoints between sentences using an embedding model. It identifies points where the cosine similarity between adjacent sentence embeddings drops significantly. This is a powerful way to create topically coherent chunks. Requires the `[semantic]` extra.
+
+The `breakpoint_method` and `breakpoint_threshold` parameters control how a breakpoint is determined:
+- `breakpoint_method='percentile'` (default): A split occurs if the similarity is below the `X`-th percentile of all similarities in the document. `breakpoint_threshold` is the percentile (e.g., `95`).
+- `breakpoint_method='std_dev'`: A split occurs if the similarity is more than `X` standard deviations below the mean similarity. `breakpoint_threshold` is the number of standard deviations (e.g., `1.5`).
+- `breakpoint_method='absolute'`: A split occurs if the similarity is below a fixed value. `breakpoint_threshold` is the similarity value (e.g., `0.85`).
 
 ```python
 from text_segmentation.strategies.semantic import SemanticSplitter
@@ -139,12 +145,16 @@ from text_segmentation.strategies.semantic import SemanticSplitter
 # model = SentenceTransformer('all-MiniLM-L6-v2')
 # embedding_function = model.encode
 
+# Example using standard deviation to find breakpoints
 splitter = SemanticSplitter(
     embedding_function=my_embedding_function,
-    breakpoint_method="percentile",
-    breakpoint_threshold=95
+    breakpoint_method="std_dev",
+    breakpoint_threshold=1.2
 )
 chunks = splitter.split_text(my_text)
+
+# If a resulting semantic chunk is larger than chunk_size, it is automatically
+# split further by the RecursiveCharacterSplitter.
 ```
 
 ### CodeSplitter

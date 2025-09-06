@@ -5,6 +5,7 @@ from text_segmentation.base import TextSplitter
 from text_segmentation.core import Chunk
 from text_segmentation.strategies.recursive import RecursiveCharacterSplitter
 from text_segmentation.strategies.sentence import SentenceSplitter
+from text_segmentation.utils import _populate_overlap_metadata
 
 try:
     import numpy as np
@@ -149,5 +150,8 @@ class SemanticSplitter(TextSplitter):
                     sequence_number += 1
             else:
                 final_chunks.append(Chunk(content=content, start_index=group_start_char_idx, end_index=last_group[-1].end_index, sequence_number=sequence_number, source_document_id=source_document_id, chunking_strategy_used="semantic"))
+
+        # Post-process to add overlap metadata using the shared utility.
+        _populate_overlap_metadata(final_chunks, text)
 
         return self._enforce_minimum_chunk_size(final_chunks)
