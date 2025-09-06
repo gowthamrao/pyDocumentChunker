@@ -45,9 +45,13 @@ html = [
 # For integration with other frameworks
 langchain = ["langchain-core"]
 llamaindex = ["llama-index-core>=0.10.0"]
+tokenizers = [
+    "tiktoken>=0.7.0"
+]
 # For development and testing
 dev = [
     "pytest>=8.0.0",
+    "advanced-text-segmentation[tokenizers]"
 ]
 
 

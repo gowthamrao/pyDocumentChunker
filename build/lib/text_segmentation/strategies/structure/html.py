@@ -145,102 +145,70 @@ class HTMLSplitter(TextSplitter):
 
         chunks: List[Chunk] = []
         current_chunk_blocks: List[Tuple[str, int, int, Dict[str, Any]]] = []
-        current_length = 0
         sequence_number = 0
 
-        for block_text, block_start, block_end, block_context in blocks:
-            block_len = self.length_function(block_text)
+        def flush_current_chunk():
+            nonlocal sequence_number, current_chunk_blocks
+            if not current_chunk_blocks:
+                return
 
-            if block_len > self.chunk_size:
-                # Flush the current chunk if it exists
-                if current_chunk_blocks:
-                    content = " ".join(b[0] for b in current_chunk_blocks)
-                    start_idx = current_chunk_blocks[0][1]
-                    end_idx = current_chunk_blocks[-1][2]
-                    merged_context = {}
-                    for b in reversed(current_chunk_blocks):
-                        merged_context.update(b[3])
-                    chunks.append(
-                        Chunk(
-                            content=content,
-                            start_index=start_idx,
-                            end_index=end_idx,
-                            sequence_number=sequence_number,
-                            source_document_id=source_document_id,
-                            hierarchical_context=merged_context,
-                            chunking_strategy_used="html",
-                        )
-                    )
-                    sequence_number += 1
-                    current_chunk_blocks, current_length = [], 0
-
-                # Split the oversized block using the fallback
-                fallback_chunks = self._fallback_splitter.split_text(block_text)
-                for fb_chunk in fallback_chunks:
-                    # Note: Fallback indices are relative to the block, not the doc.
-                    chunks.append(
-                        Chunk(
-                            content=fb_chunk.content,
-                            start_index=block_start, # The whole block's start index
-                            end_index=block_end,     # The whole block's end index
-                            sequence_number=sequence_number,
-                            source_document_id=source_document_id,
-                            hierarchical_context=block_context,
-                            chunking_strategy_used="html-fallback",
-                        )
-                    )
-                    sequence_number += 1
-                continue
-
-            # If adding the next block exceeds size, flush the current chunk
-            if current_length > 0 and current_length + block_len > self.chunk_size:
-                content = " ".join(b[0] for b in current_chunk_blocks)
-                start_idx = current_chunk_blocks[0][1]
-                end_idx = current_chunk_blocks[-1][2]
-                merged_context = {}
-                for b in reversed(current_chunk_blocks):
-                    merged_context.update(b[3])
-                chunks.append(
-                    Chunk(
-                        content=content,
-                        start_index=start_idx,
-                        end_index=end_idx,
-                        sequence_number=sequence_number,
-                        source_document_id=source_document_id,
-                        hierarchical_context=merged_context,
-                        chunking_strategy_used="html",
-                    )
-                )
-                sequence_number += 1
-                current_chunk_blocks, current_length = [], 0
-
-            current_chunk_blocks.append((block_text, block_start, block_end, block_context))
-            current_length += block_len
-
-        # Flush any remaining blocks
-        if current_chunk_blocks:
             content = " ".join(b[0] for b in current_chunk_blocks)
             start_idx = current_chunk_blocks[0][1]
             end_idx = current_chunk_blocks[-1][2]
             merged_context = {}
             for b in reversed(current_chunk_blocks):
                 merged_context.update(b[3])
-            chunks.append(
-                Chunk(
-                    content=content,
-                    start_index=start_idx,
-                    end_index=end_idx,
-                    sequence_number=sequence_number,
-                    source_document_id=source_document_id,
-                    hierarchical_context=merged_context,
-                    chunking_strategy_used="html",
-                )
-            )
 
-        final_chunks = self._enforce_minimum_chunk_size(chunks)
+            chunks.append(Chunk(
+                content=content,
+                start_index=start_idx,
+                end_index=end_idx,
+                sequence_number=sequence_number,
+                source_document_id=source_document_id,
+                hierarchical_context=merged_context,
+                chunking_strategy_used="html",
+            ))
+            sequence_number += 1
+            current_chunk_blocks = []
 
-        # Final pass to re-assign sequence numbers for consistency
-        for i, chunk in enumerate(final_chunks):
-            chunk.sequence_number = i
+        for block_text, block_start, block_end, block_context in blocks:
+            if self.length_function(block_text) > self.chunk_size:
+                flush_current_chunk()
+                # Split the oversized block using the fallback
+                fallback_chunks = self._fallback_splitter.split_text(block_text)
+                for fb_chunk in fallback_chunks:
+                    chunks.append(Chunk(
+                        content=fb_chunk.content,
+                        start_index=block_start,
+                        end_index=block_end,
+                        sequence_number=sequence_number,
+                        source_document_id=source_document_id,
+                        hierarchical_context=block_context,
+                        chunking_strategy_used="html-fallback",
+                    ))
+                    sequence_number += 1
+                continue
 
+            # Check if adding the next block would exceed the chunk size.
+            potential_content = " ".join(b[0] for b in current_chunk_blocks + [(block_text, 0, 0, {})])
+            if self.length_function(potential_content) > self.chunk_size and current_chunk_blocks:
+                flush_current_chunk()
+
+            current_chunk_blocks.append((block_text, block_start, block_end, block_context))
+
+        flush_current_chunk()
+
+        # Post-process to add overlap metadata, fulfilling FRD requirements R-5.2.7
+        # and R-5.2.8. Even though this strategy doesn't create overlapping chunks
+        # by design, the fallback splitter does, and runt merging can also
+        # introduce overlaps. Therefore, this step is essential for consistency.
+        from text_segmentation.utils import _populate_overlap_metadata
+        _populate_overlap_metadata(chunks, text)
+
+        # Enforce the minimum chunk size. This call now includes the original text
+        # so that it can correctly recalculate overlap metadata after merging runts.
+        final_chunks = self._enforce_minimum_chunk_size(chunks, text)
+
+        # The sequence numbers are re-assigned within _enforce_minimum_chunk_size,
+        # so we can just return the result.
         return final_chunks
