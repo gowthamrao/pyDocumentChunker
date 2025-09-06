@@ -193,3 +193,44 @@ class TestBaseFunctionality:
         assert chunks_prev[0].content == "Runt. This is a normal chunk."
         assert chunks_prev[0].start_index == 0
         assert chunks_prev[0].end_index == 29
+
+    def test_overlap_metadata_is_populated(self):
+        """
+        Tests that overlap_content_next and overlap_content_previous are
+        correctly populated in a standard scenario, as per FRD R-5.2.7 and R-5.2.8.
+        This test is robust and checks the relationships and properties of the
+        overlap rather than relying on brittle string comparisons.
+        """
+        text = "This is a sentence. This is another sentence. And a third."
+        splitter = FixedSizeSplitter(
+            chunk_size=20,
+            chunk_overlap=8,
+        )
+        chunks = splitter.split_text(text)
+
+        # There should be at least two chunks to test overlap
+        assert len(chunks) > 1
+
+        # Check boundary conditions
+        assert chunks[0].overlap_content_previous is None, "First chunk should have no previous overlap"
+        assert chunks[-1].overlap_content_next is None, "Last chunk should have no next overlap"
+
+        # Check all the intermediate overlaps
+        for i in range(len(chunks) - 1):
+            current_chunk = chunks[i]
+            next_chunk = chunks[i + 1]
+
+            # The overlap content should exist for all intermediate links
+            assert current_chunk.overlap_content_next is not None
+            assert next_chunk.overlap_content_previous is not None
+
+            # The "next" of the current should be the "previous" of the next
+            assert current_chunk.overlap_content_next == next_chunk.overlap_content_previous
+
+            # For FixedSizeSplitter, the overlap length should be exactly chunk_overlap,
+            # except possibly for the very last overlap if the text ends abruptly.
+            # We check that the length is at least consistent.
+            overlap_len = len(current_chunk.overlap_content_next)
+            assert overlap_len > 0
+            # It should not be excessively large
+            assert overlap_len <= splitter.chunk_overlap
