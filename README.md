@@ -39,6 +39,28 @@ pip install .[langchain,llamaindex]
 pip install .[dev,nlp,markdown,html,semantic,code,langchain,llamaindex]
 ```
 
+## Running Tests
+
+To run the test suite, you first need to install all the development dependencies:
+
+```bash
+pip install .[dev,nlp,markdown,html,semantic,code,langchain,llamaindex]
+```
+
+Additionally, some tests depend on data from the NLTK library. You will need to download the 'punkt' and 'punkt_tab' tokenizers. You can do this by running the following Python code:
+
+```python
+import nltk
+nltk.download('punkt')
+nltk.download('punkt_tab')
+```
+
+Once the dependencies and NLTK data are ready, you can run the tests using `pytest`:
+
+```bash
+pytest
+```
+
 ## Quick Start
 
 The simplest way to get started is with the `RecursiveCharacterSplitter`, which is a good general-purpose splitter.

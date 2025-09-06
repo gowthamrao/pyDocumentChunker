@@ -45,6 +45,7 @@ llamaindex = ["llama-index-core>=0.10.0"]
 # For development and testing
 dev = [
     "pytest>=8.0.0",
+    "pytest-mock>=3.12.0",
 ]
 
 
