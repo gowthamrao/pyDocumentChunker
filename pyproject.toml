@@ -24,6 +24,9 @@ dependencies = []
 nlp = [
     "nltk>=3.8",
 ]
+spacy = [
+    "spacy>=3.7.0",
+]
 semantic = [
     "numpy>=1.26",
 ]

@@ -1,0 +1,198 @@
+import re
+from typing import Any, List, Optional, Tuple
+
+from text_segmentation.base import TextSplitter
+from text_segmentation.core import Chunk
+
+
+class RecursiveCharacterSplitter(TextSplitter):
+    """
+    Splits text recursively based on a prioritized list of character separators.
+
+    This strategy is one of the most common and versatile for text chunking. It
+    works by attempting to split the text hierarchically using a list of
+    separators. If a split results in a segment that is still too large, the
+    strategy recursively attempts to split that segment using the next separator
+    in the list.
+
+    This implementation follows a two-stage process to ensure that the `start_index`
+    metadata is accurately preserved:
+    1.  **Splitting:** The text is recursively broken down into small pieces using the
+        provided separators. The output of this stage is a list of text fragments,
+        each with its start index relative to the original document.
+    2.  **Merging:** The small, indexed fragments are then merged back together into
+        chunks that respect the `chunk_size` and `chunk_overlap` parameters.
+    """
+
+    def __init__(
+        self,
+        separators: Optional[List[str]] = None,
+        keep_separator: bool = True,
+        *args: Any,
+        **kwargs: Any,
+    ):
+        """
+        Initializes the RecursiveCharacterSplitter.
+
+        Args:
+            separators: A prioritized list of strings or regex patterns to split on.
+                Defaults to `["\\n\\n", "\\n", ". ", " ", ""]`.
+            keep_separator: If True, the separator is kept as part of the preceding
+                chunk. This is generally recommended to preserve context.
+            *args, **kwargs: Additional arguments passed to the base `TextSplitter`.
+        """
+        super().__init__(*args, **kwargs)
+        self._separators = separators or ["\n\n", "\n", ". ", " ", ""]
+        self._keep_separator = keep_separator
+
+    def _split_text_with_separator(self, text: str, separator: str) -> List[str]:
+        """Splits text by a separator, optionally keeping the separator."""
+        if not separator:
+            return list(text)
+
+        if self._keep_separator:
+            # Use a lookbehind assertion to keep the separator with the preceding part.
+            # The regex splits the text *after* the separator.
+            # e.g., "a.b.c" split by "." -> ["a.", "b.", "c"]
+            try:
+                splits = re.split(f"(?<={separator})", text)
+            except re.error:
+                # Fallback for complex separators that don't work with lookbehind
+                splits = text.split(separator)
+        else:
+            splits = re.split(separator, text)
+
+        return [s for s in splits if s]
+
+    def _recursive_split(
+        self, text: str, separators: List[str], start_index: int
+    ) -> List[Tuple[str, int]]:
+        """Recursively splits text and returns fragments with their start indices."""
+        if not text:
+            return []
+
+        text_length = self.length_function(text)
+        if text_length <= self.chunk_size:
+            return [(text, start_index)]
+
+        if not separators:
+            # Base case: no more separators, but text is still too long.
+            # Force split by character, respecting overlap.
+            fragments = []
+            step = self.chunk_size - self.chunk_overlap
+            for i in range(0, len(text), step):
+                chunk_text = text[i : i + self.chunk_size]
+                fragments.append((chunk_text, start_index + i))
+            return fragments
+
+        # Try to split with the current separator
+        current_separator = separators[0]
+        remaining_separators = separators[1:]
+
+        splits = [s for s in self._split_text_with_separator(text, current_separator) if s]
+
+        # If the separator didn't split the text, try the next one
+        if len(splits) <= 1:
+            return self._recursive_split(text, remaining_separators, start_index)
+
+        # Process the splits
+        fragments = []
+        current_offset = 0
+        for part in splits:
+            part_start_index = start_index + text.find(part, current_offset)
+            fragments.extend(
+                self._recursive_split(part, remaining_separators, part_start_index)
+            )
+            current_offset = part_start_index - start_index + len(part)
+
+        return fragments
+
+    def split_text(
+        self, text: str, source_document_id: Optional[str] = None
+    ) -> List[Chunk]:
+        """
+        Splits the input text using the recursive and merging strategy.
+
+        Args:
+            text: The text to be split.
+            source_document_id: Optional identifier for the source document.
+
+        Returns:
+            A list of `Chunk` objects.
+        """
+        text = self._preprocess(text)
+        if not text:
+            return []
+
+        # Stage 1: Recursively split text into indexed fragments
+        fragments = self._recursive_split(text, self._separators, 0)
+
+        # Stage 2: Merge fragments into chunks
+        chunks: List[Chunk] = []
+        current_chunk_fragments: List[Tuple[str, int]] = []
+        current_length = 0
+        sequence_number = 0
+
+        for i, (fragment_text, fragment_start_index) in enumerate(fragments):
+            fragment_length = self.length_function(fragment_text)
+
+            # If adding the next fragment would exceed chunk_size, finalize the current chunk
+            if current_length + fragment_length > self.chunk_size and current_chunk_fragments:
+                content = "".join(f[0] for f in current_chunk_fragments)
+                start_idx = current_chunk_fragments[0][1]
+
+                chunk = Chunk(
+                    content=content,
+                    start_index=start_idx,
+                    end_index=start_idx + len(content),
+                    sequence_number=sequence_number,
+                    source_document_id=source_document_id,
+                    chunking_strategy_used="recursive_character",
+                )
+                chunks.append(chunk)
+                sequence_number += 1
+
+                # Start a new chunk, handling overlap
+                # Find where to start the next chunk from the previous fragments
+                overlap_len = 0
+                overlap_fragments_start_index = len(current_chunk_fragments) - 1
+
+                while overlap_fragments_start_index >= 0:
+                    frag_text = current_chunk_fragments[overlap_fragments_start_index][0]
+                    frag_len = self.length_function(frag_text)
+                    if overlap_len + frag_len > self.chunk_overlap:
+                        break
+                    overlap_len += frag_len
+                    overlap_fragments_start_index -= 1
+
+                # The new chunk starts from the determined overlap point
+                current_chunk_fragments = current_chunk_fragments[overlap_fragments_start_index + 1:]
+                current_length = sum(self.length_function(f[0]) for f in current_chunk_fragments)
+
+            current_chunk_fragments.append((fragment_text, fragment_start_index))
+            current_length += fragment_length
+
+        # Add the last remaining chunk
+        if current_chunk_fragments:
+            content = "".join(f[0] for f in current_chunk_fragments)
+            start_idx = current_chunk_fragments[0][1]
+            chunk = Chunk(
+                content=content,
+                start_index=start_idx,
+                end_index=start_idx + len(content),
+                sequence_number=sequence_number,
+                source_document_id=source_document_id,
+                chunking_strategy_used="recursive_character",
+            )
+            chunks.append(chunk)
+
+        # Post-process to add overlap metadata
+        for i in range(len(chunks) - 1):
+            current_chunk = chunks[i]
+            next_chunk = chunks[i + 1]
+            if next_chunk.start_index < current_chunk.end_index:
+                overlap_content = text[next_chunk.start_index:current_chunk.end_index]
+                current_chunk.overlap_content_next = overlap_content
+                next_chunk.overlap_content_previous = overlap_content
+
+        return self._enforce_minimum_chunk_size(chunks)

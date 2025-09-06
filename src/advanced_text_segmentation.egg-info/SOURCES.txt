@@ -23,6 +23,7 @@ src/text_segmentation/strategies/sentence.py
 src/text_segmentation/strategies/structure/__init__.py
 src/text_segmentation/strategies/structure/html.py
 src/text_segmentation/strategies/structure/markdown.py
+tests/test_base.py
 tests/test_fixed_size.py
 tests/test_html.py
 tests/test_markdown.py
