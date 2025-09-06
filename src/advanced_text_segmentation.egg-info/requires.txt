@@ -1,7 +1,7 @@
 
 [code]
 tree-sitter>=0.21.0
-tree-sitter-languages>=1.10.0
+tree-sitter-language-pack>=0.3.0
 
 [dev]
 pytest>=8.0.0

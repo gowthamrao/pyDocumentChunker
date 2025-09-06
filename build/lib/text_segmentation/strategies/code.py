@@ -141,4 +141,9 @@ class CodeSplitter(TextSplitter):
         for i, chunk in enumerate(chunks):
             chunk.sequence_number = i
 
-        return self._enforce_minimum_chunk_size(chunks)
+        # Populate overlap metadata before handling runts
+        from text_segmentation.utils import _populate_overlap_metadata
+        _populate_overlap_metadata(chunks, text)
+
+        # Enforce minimum chunk size, which will also recalculate overlap if merges occur
+        return self._enforce_minimum_chunk_size(chunks, text)

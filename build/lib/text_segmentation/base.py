@@ -91,7 +91,7 @@ class TextSplitter(ABC):
         self.minimum_chunk_size = minimum_chunk_size or 0
         self.min_chunk_merge_strategy = min_chunk_merge_strategy
 
-    def _enforce_minimum_chunk_size(self, chunks: List[Chunk]) -> List[Chunk]:
+    def _enforce_minimum_chunk_size(self, chunks: List[Chunk], original_text: str) -> List[Chunk]:
         """
         Enforces the minimum chunk size by merging or discarding small chunks.
 
@@ -101,53 +101,61 @@ class TextSplitter(ABC):
             return chunks
 
         if self.min_chunk_merge_strategy == "discard":
-            return [
+            merged_chunks = [
                 c
                 for c in chunks
                 if self.length_function(c.content) >= self.minimum_chunk_size
             ]
+        else:
+            # Create a new list of copies to avoid modifying original chunk objects
+            # in case they are referenced elsewhere.
+            original_chunks = [copy.copy(c) for c in chunks]
+            merged_chunks: List[Chunk] = []
 
-        # Create a new list of copies to avoid modifying original chunk objects
-        # in case they are referenced elsewhere.
-        original_chunks = [copy.copy(c) for c in chunks]
-        merged_chunks: List[Chunk] = []
+            if self.min_chunk_merge_strategy == "merge_with_previous":
+                for chunk in original_chunks:
+                    is_runt = self.length_function(chunk.content) < self.minimum_chunk_size
+                    can_merge = merged_chunks and (self.length_function(merged_chunks[-1].content) + self.length_function(chunk.content)) <= self.chunk_size
 
-        if self.min_chunk_merge_strategy == "merge_with_previous":
-            for chunk in original_chunks:
-                is_runt = self.length_function(chunk.content) < self.minimum_chunk_size
-                can_merge = merged_chunks and (self.length_function(merged_chunks[-1].content) + self.length_function(chunk.content)) <= self.chunk_size
+                    if is_runt and can_merge:
+                        # Merge this small chunk with the previous one
+                        last_chunk = merged_chunks[-1]
+                        last_chunk.content += chunk.content
+                        last_chunk.end_index = chunk.end_index
+                    else:
+                        merged_chunks.append(chunk)
 
-                if is_runt and can_merge:
-                    # Merge this small chunk with the previous one
-                    last_chunk = merged_chunks[-1]
-                    last_chunk.content += chunk.content
-                    last_chunk.end_index = chunk.end_index
-                else:
-                    merged_chunks.append(chunk)
+            elif self.min_chunk_merge_strategy == "merge_with_next":
+                i = 0
+                while i < len(original_chunks):
+                    current_chunk = original_chunks[i]
+                    is_runt = self.length_function(current_chunk.content) < self.minimum_chunk_size
+                    can_merge = (i + 1) < len(original_chunks) and (self.length_function(current_chunk.content) + self.length_function(original_chunks[i+1].content)) <= self.chunk_size
 
-        elif self.min_chunk_merge_strategy == "merge_with_next":
-            i = 0
-            while i < len(original_chunks):
-                current_chunk = original_chunks[i]
-                is_runt = self.length_function(current_chunk.content) < self.minimum_chunk_size
-                can_merge = (i + 1) < len(original_chunks) and (self.length_function(current_chunk.content) + self.length_function(original_chunks[i+1].content)) <= self.chunk_size
+                    if is_runt and can_merge:
+                        # Merge this small chunk with the next one
+                        next_chunk = original_chunks[i + 1]
+                        current_chunk.content += next_chunk.content
+                        current_chunk.end_index = next_chunk.end_index
+                        # Remove the merged chunk from our perspective
+                        original_chunks.pop(i + 1)
+                        # Stay at the current index to re-evaluate the merged chunk
+                        continue
 
-                if is_runt and can_merge:
-                    # Merge this small chunk with the next one
-                    next_chunk = original_chunks[i + 1]
-                    current_chunk.content += next_chunk.content
-                    current_chunk.end_index = next_chunk.end_index
-                    # Remove the merged chunk from our perspective
-                    original_chunks.pop(i + 1)
-                    # Stay at the current index to re-evaluate the merged chunk
-                    continue
+                    merged_chunks.append(current_chunk)
+                    i += 1
 
-                merged_chunks.append(current_chunk)
-                i += 1
-
-        # Re-assign sequence numbers and return
+        # Re-assign sequence numbers
         for i, chunk in enumerate(merged_chunks):
             chunk.sequence_number = i
+
+        # After merging or discarding, the overlap metadata of the affected chunks
+        # may be stale. We must recalculate it to ensure consistency and correctness.
+        # This addresses a bug where merging runts would not update the overlap
+        # content of neighboring chunks.
+        from text_segmentation.utils import _populate_overlap_metadata
+        _populate_overlap_metadata(merged_chunks, original_text)
+
         return merged_chunks
 
     def _preprocess(self, text: str) -> str:
