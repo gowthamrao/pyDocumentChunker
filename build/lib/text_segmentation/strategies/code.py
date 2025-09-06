@@ -93,42 +93,21 @@ class CodeSplitter(TextSplitter):
             unicode_normalize=self.unicode_normalize,
         )
 
-    def _node_to_chunks(
-        self, node: Node, text_bytes: bytes, source_document_id: Optional[str]
-    ) -> List[Chunk]:
-        """Recursively splits a tree-sitter node into chunks."""
-        node_text = text_bytes[node.start_byte : node.end_byte].decode("utf-8")
+    def _find_chunkable_nodes(self, node: Node) -> List[Node]:
+        """
+        Performs a pre-order traversal to find the highest-level chunkable nodes.
 
-        if self.length_function(node_text) <= self.chunk_size:
-            return [
-                Chunk(
-                    content=node_text,
-                    start_index=node.start_byte,  # Note: using bytes for indices
-                    end_index=node.end_byte,
-                    sequence_number=0,  # Will be re-sequenced later
-                    source_document_id=source_document_id,
-                    chunking_strategy_used="code",
-                )
-            ]
+        If a node is of a chunkable type, it is added to the list, and its
+        children are not traversed further. This prioritizes high-level constructs
+        (like whole classes) over their smaller constituents (like methods).
+        """
+        if node.type in self._chunkable_nodes:
+            return [node]
 
-        # Node is too large, try to split by its children
-        child_chunks = []
+        chunkable_children = []
         for child in node.children:
-            # Only consider children that are themselves chunkable constructs
-            if child.type in self._chunkable_nodes:
-                child_chunks.extend(
-                    self._node_to_chunks(child, text_bytes, source_document_id)
-                )
-
-        if child_chunks:
-            return child_chunks
-
-        # No suitable children to split by, use fallback splitter
-        fallback_chunks = self._fallback_splitter.split_text(node_text, source_document_id)
-        for chunk in fallback_chunks:
-            chunk.start_index += node.start_byte  # Adjust index to be relative to the whole document
-            chunk.end_index += node.start_byte
-        return fallback_chunks
+            chunkable_children.extend(self._find_chunkable_nodes(child))
+        return chunkable_children
 
     def split_text(
         self, text: str, source_document_id: Optional[str] = None
@@ -143,18 +122,49 @@ class CodeSplitter(TextSplitter):
         root_node = tree.root_node
 
         if not root_node.children:
+            # If the document is empty or just whitespace
             return self._fallback_splitter.split_text(text, source_document_id)
 
-        # Start by splitting the root node
-        chunks = self._node_to_chunks(root_node, text_bytes, source_document_id)
+        # 1. Find all the highest-level syntactic nodes that are designated as chunkable.
+        chunkable_nodes = self._find_chunkable_nodes(root_node)
 
-        # Re-assign sequence numbers
+        # If no chunkable nodes are found, fallback to splitting the whole document.
+        if not chunkable_nodes:
+            return self._fallback_splitter.split_text(text, source_document_id)
+
+        chunks: List[Chunk] = []
+        for node in chunkable_nodes:
+            node_text = text_bytes[node.start_byte : node.end_byte].decode("utf-8")
+
+            # 2. If a high-level node is still larger than chunk_size, use the
+            #    fallback splitter on just the text of that node.
+            if self.length_function(node_text) > self.chunk_size:
+                fallback_chunks = self._fallback_splitter.split_text(
+                    node_text, source_document_id
+                )
+                # Adjust indices of fallback chunks to be relative to the whole document
+                for chunk in fallback_chunks:
+                    chunk.start_index += node.start_byte
+                    chunk.end_index += node.start_byte
+                    chunk.chunking_strategy_used = "code-fallback"
+                chunks.extend(fallback_chunks)
+            else:
+                # 3. Otherwise, create a single chunk from the node.
+                chunk = Chunk(
+                    content=node_text,
+                    start_index=node.start_byte,
+                    end_index=node.end_byte,
+                    sequence_number=0,  # Placeholder, will be re-sequenced
+                    source_document_id=source_document_id,
+                    chunking_strategy_used="code",
+                )
+                chunks.append(chunk)
+
+        # Re-assign sequence numbers for the final list of chunks
         for i, chunk in enumerate(chunks):
             chunk.sequence_number = i
 
-        # Populate overlap metadata before handling runts
+        # Populate overlap metadata and handle runts as post-processing steps
         from text_segmentation.utils import _populate_overlap_metadata
         _populate_overlap_metadata(chunks, text)
-
-        # Enforce minimum chunk size, which will also recalculate overlap if merges occur
         return self._enforce_minimum_chunk_size(chunks, text)
