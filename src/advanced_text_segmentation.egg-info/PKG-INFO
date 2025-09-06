@@ -227,6 +227,7 @@ Requires-Dist: markdown-it-py>=3.0.0; extra == "markdown"
 Provides-Extra: html
 Requires-Dist: beautifulsoup4>=4.12.3; extra == "html"
 Requires-Dist: lxml>=5.2.0; extra == "html"
+Requires-Dist: html5lib; extra == "html"
 Provides-Extra: langchain
 Requires-Dist: langchain-core; extra == "langchain"
 Provides-Extra: llamaindex

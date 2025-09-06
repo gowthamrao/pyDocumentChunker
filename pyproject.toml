@@ -36,7 +36,8 @@ markdown = [
 ]
 html = [
     "beautifulsoup4>=4.12.3",
-    "lxml>=5.2.0"
+    "lxml>=5.2.0",
+    "html5lib"
 ]
 # For integration with other frameworks
 langchain = ["langchain-core"]
