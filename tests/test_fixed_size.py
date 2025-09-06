@@ -54,3 +54,20 @@ class TestFixedSizeSplitter:
         assert chunks[1].overlap_content_previous == " three "
         assert chunks[1].overlap_content_next == " five "
         assert chunks[2].overlap_content_previous == " five "
+
+    def test_fixed_size_splitter_ignores_separators(self):
+        """
+        Tests that the FixedSizeSplitter ignores the `separators` and `keep_separator` arguments.
+        """
+        # This should not raise an error and the splitter should still work as expected.
+        splitter = FixedSizeSplitter(
+            chunk_size=10,
+            chunk_overlap=5,
+            separators=["\n\n"],
+            keep_separator=False
+        )
+        text = "This is a test."
+        chunks = splitter.split_text(text)
+        assert len(chunks) == 2
+        assert chunks[0].content == "This is a "
+        assert chunks[1].content == "is a test."

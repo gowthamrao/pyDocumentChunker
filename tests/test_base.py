@@ -235,3 +235,33 @@ class TestBaseFunctionality:
             assert overlap_len > 0
             # It should not be excessively large
             assert overlap_len <= splitter.chunk_overlap
+
+    def test_invalid_chunk_overlap_raises_error(self):
+        with pytest.raises(ValueError, match="Chunk overlap .* must be smaller than"):
+            FixedSizeSplitter(chunk_size=10, chunk_overlap=10)
+
+    def test_preprocess_without_strip_control_chars(self):
+        text = "Hello\x00 World"
+        splitter = FixedSizeSplitter(strip_control_chars=False)
+        processed_text = splitter._preprocess(text)
+        assert processed_text == text
+
+    def test_chunk_method(self):
+        text = "This is a test."
+        splitter = FixedSizeSplitter(chunk_size=10, chunk_overlap=5)
+        chunks = splitter.chunk(text)
+        assert len(chunks) == 2
+        assert chunks[0].content == "This is a "
+        assert chunks[1].content == "is a test."
+
+    def test_preprocess_strips_control_chars(self):
+        text = "Hello\x00 World"
+        splitter = FixedSizeSplitter(strip_control_chars=True)
+        processed_text = splitter._preprocess(text)
+        assert processed_text == "Hello World"
+
+    def test_preprocess_preserves_control_chars(self):
+        text = "Hello\x00 World"
+        splitter = FixedSizeSplitter(strip_control_chars=False)
+        processed_text = splitter._preprocess(text)
+        assert processed_text == text
