@@ -48,7 +48,8 @@ class TextSplitter(ABC):
             minimum_chunk_size: Optional integer. If a generated chunk's size is
                 below this, it will be handled by the specified strategy.
             min_chunk_merge_strategy: How to handle chunks smaller than
-                `minimum_chunk_size`. Can be 'discard' or 'merge_with_previous'.
+                `minimum_chunk_size`. Can be 'discard', 'merge_with_previous',
+                or 'merge_with_next'.
 
         Raises:
             ValueError: If `chunk_overlap` is not smaller than `chunk_size`.
@@ -75,10 +76,11 @@ class TextSplitter(ABC):
                 f"minimum_chunk_size ({minimum_chunk_size}) must be smaller than "
                 f"chunk_size ({chunk_size})."
             )
-        if min_chunk_merge_strategy not in ["discard", "merge_with_previous"]:
+        valid_merge_strategies = ["discard", "merge_with_previous", "merge_with_next"]
+        if min_chunk_merge_strategy not in valid_merge_strategies:
             raise ValueError(
                 f"Invalid min_chunk_merge_strategy: {min_chunk_merge_strategy}. "
-                "Must be one of 'discard', 'merge_with_previous'."
+                f"Must be one of {valid_merge_strategies}."
             )
 
         self.chunk_size = chunk_size
@@ -105,25 +107,48 @@ class TextSplitter(ABC):
                 if self.length_function(c.content) >= self.minimum_chunk_size
             ]
 
+        # Create a new list of copies to avoid modifying original chunk objects
+        # in case they are referenced elsewhere.
+        original_chunks = [copy.copy(c) for c in chunks]
+        merged_chunks: List[Chunk] = []
+
         if self.min_chunk_merge_strategy == "merge_with_previous":
-            merged_chunks: List[Chunk] = []
-            for chunk in chunks:
-                if self.length_function(chunk.content) < self.minimum_chunk_size and merged_chunks:
+            for chunk in original_chunks:
+                is_runt = self.length_function(chunk.content) < self.minimum_chunk_size
+                can_merge = merged_chunks and (self.length_function(merged_chunks[-1].content) + self.length_function(chunk.content)) <= self.chunk_size
+
+                if is_runt and can_merge:
                     # Merge this small chunk with the previous one
                     last_chunk = merged_chunks[-1]
                     last_chunk.content += chunk.content
                     last_chunk.end_index = chunk.end_index
                 else:
-                    # Append a copy to avoid modifying the original list's objects
-                    merged_chunks.append(copy.copy(chunk))
+                    merged_chunks.append(chunk)
 
-            # Re-assign sequence numbers
-            for i, chunk in enumerate(merged_chunks):
-                chunk.sequence_number = i
+        elif self.min_chunk_merge_strategy == "merge_with_next":
+            i = 0
+            while i < len(original_chunks):
+                current_chunk = original_chunks[i]
+                is_runt = self.length_function(current_chunk.content) < self.minimum_chunk_size
+                can_merge = (i + 1) < len(original_chunks) and (self.length_function(current_chunk.content) + self.length_function(original_chunks[i+1].content)) <= self.chunk_size
 
-            return merged_chunks
+                if is_runt and can_merge:
+                    # Merge this small chunk with the next one
+                    next_chunk = original_chunks[i + 1]
+                    current_chunk.content += next_chunk.content
+                    current_chunk.end_index = next_chunk.end_index
+                    # Remove the merged chunk from our perspective
+                    original_chunks.pop(i + 1)
+                    # Stay at the current index to re-evaluate the merged chunk
+                    continue
 
-        return chunks
+                merged_chunks.append(current_chunk)
+                i += 1
+
+        # Re-assign sequence numbers and return
+        for i, chunk in enumerate(merged_chunks):
+            chunk.sequence_number = i
+        return merged_chunks
 
     def _preprocess(self, text: str) -> str:
         """
@@ -131,6 +156,9 @@ class TextSplitter(ABC):
 
         This method is called by concrete splitter implementations before chunking.
         """
+        # Remove null bytes, as they can cause issues with many text processing tools.
+        text = text.replace("\x00", "")
+
         if self.unicode_normalize:
             text = unicodedata.normalize(self.unicode_normalize, text)
         if self.normalize_whitespace:

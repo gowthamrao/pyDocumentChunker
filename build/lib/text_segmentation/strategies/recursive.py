@@ -127,20 +127,20 @@ class RecursiveCharacterSplitter(TextSplitter):
         # Stage 1: Recursively split text into indexed fragments
         fragments = self._recursive_split(text, self._separators, 0)
 
-        # Stage 2: Merge fragments into chunks
+        # Stage 2: Merge fragments into chunks, with correct length calculation.
         chunks: List[Chunk] = []
         current_chunk_fragments: List[Tuple[str, int]] = []
-        current_length = 0
         sequence_number = 0
 
-        for i, (fragment_text, fragment_start_index) in enumerate(fragments):
-            fragment_length = self.length_function(fragment_text)
-
-            # If adding the next fragment would exceed chunk_size, finalize the current chunk
-            if current_length + fragment_length > self.chunk_size and current_chunk_fragments:
+        for fragment_text, fragment_start_index in fragments:
+            # Check if adding the next fragment would exceed the chunk size.
+            # This is done by joining the content and measuring, which is correct
+            # for non-additive length functions like tokenizers.
+            potential_content = "".join(f[0] for f in current_chunk_fragments) + fragment_text
+            if self.length_function(potential_content) > self.chunk_size and current_chunk_fragments:
+                # Finalize the current chunk
                 content = "".join(f[0] for f in current_chunk_fragments)
                 start_idx = current_chunk_fragments[0][1]
-
                 chunk = Chunk(
                     content=content,
                     start_index=start_idx,
@@ -152,25 +152,31 @@ class RecursiveCharacterSplitter(TextSplitter):
                 chunks.append(chunk)
                 sequence_number += 1
 
-                # Start a new chunk, handling overlap
-                # Find where to start the next chunk from the previous fragments
-                overlap_len = 0
-                overlap_fragments_start_index = len(current_chunk_fragments) - 1
+                # Start a new chunk, handling overlap.
+                # We slide a window backwards from the end of the last chunk's fragments.
+                overlap_fragments_start_idx = len(current_chunk_fragments) - 1
+                overlap_fragments: List[Tuple[str, int]] = []
 
-                while overlap_fragments_start_index >= 0:
-                    frag_text = current_chunk_fragments[overlap_fragments_start_index][0]
-                    frag_len = self.length_function(frag_text)
-                    if overlap_len + frag_len > self.chunk_overlap:
+                while overlap_fragments_start_idx >= 0:
+                    # Prepend the fragment to the beginning of our overlap list
+                    current_fragment = current_chunk_fragments[overlap_fragments_start_idx]
+                    overlap_fragments.insert(0, current_fragment)
+
+                    # Measure the length of the potential overlap string
+                    overlap_content = "".join(f[0] for f in overlap_fragments)
+                    if self.length_function(overlap_content) > self.chunk_overlap:
+                        # The overlap is now too big, so we discard the last fragment we added
+                        # and break the loop.
+                        overlap_fragments.pop(0)
                         break
-                    overlap_len += frag_len
-                    overlap_fragments_start_index -= 1
 
-                # The new chunk starts from the determined overlap point
-                current_chunk_fragments = current_chunk_fragments[overlap_fragments_start_index + 1:]
-                current_length = sum(self.length_function(f[0]) for f in current_chunk_fragments)
+                    overlap_fragments_start_idx -= 1
 
+                # The new chunk starts with the overlap fragments
+                current_chunk_fragments = overlap_fragments
+
+            # Add the new fragment to the current chunk
             current_chunk_fragments.append((fragment_text, fragment_start_index))
-            current_length += fragment_length
 
         # Add the last remaining chunk
         if current_chunk_fragments:

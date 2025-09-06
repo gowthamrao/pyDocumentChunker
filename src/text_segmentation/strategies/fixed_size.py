@@ -1,58 +1,62 @@
-import warnings
-from typing import List, Optional
+from typing import Any, List, Optional
 
-from text_segmentation.base import TextSplitter
 from text_segmentation.core import Chunk
+from text_segmentation.strategies.recursive import RecursiveCharacterSplitter
 
 
-class FixedSizeSplitter(TextSplitter):
+class FixedSizeSplitter(RecursiveCharacterSplitter):
     """
-    Splits text into chunks of a fixed character size.
+    Splits text into chunks of a fixed size, respecting the length_function.
+
+    This splitter is a specialized version of the RecursiveCharacterSplitter.
+    It functions by splitting the text into individual characters ("") and then
+    merging them back together into chunks that adhere to the specified
+    `chunk_size`, as measured by the `length_function`. This approach ensures
+    that even when using token-based length functions, the resulting chunks
+    do not exceed the size limit.
+
+    This strategy guarantees adherence to R-3.1.1 and R-3.1.2 from the FRD.
     """
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        if self.length_function is not len:
-            warnings.warn(
-                "The 'FixedSizeSplitter' operates on character counts, but a custom "
-                "`length_function` was provided. The splitting logic will not use this "
-                "function, which may lead to unexpected chunk sizes in terms of tokens.",
-                UserWarning,
-            )
+    def __init__(self, *args: Any, **kwargs: Any):
+        """
+        Initializes the FixedSizeSplitter.
+
+        This constructor overrides the `separators` argument and forces it to `[""]`
+        to ensure splitting happens at the character level, then passes all other
+        arguments to the parent `RecursiveCharacterSplitter`.
+
+        Args:
+            *args: Positional arguments passed to the parent splitter.
+            **kwargs: Keyword arguments passed to the parent splitter. `separators`
+                      will be ignored if provided.
+        """
+        # FRD-Gap-Analysis: The original implementation ignored the length_function.
+        # By inheriting from RecursiveCharacterSplitter and forcing the separator
+        # to be the empty string, we get a robust implementation that correctly
+        # uses the length_function and populates all metadata fields (like overlap)
+        # for free, thus fixing R-3.1.1 and R-5.2.7/R-5.2.8.
+
+        # Force the separator to be by character, which is the essence of a "fixed size" split
+        # that doesn't respect semantic boundaries.
+        if "separators" in kwargs:
+            del kwargs["separators"]
+        if "keep_separator" in kwargs:
+            del kwargs["keep_separator"]
+
+        super().__init__(separators=[""], keep_separator=True, *args, **kwargs)
 
     def split_text(
         self, text: str, source_document_id: Optional[str] = None
     ) -> List[Chunk]:
         """
-        Splits the input text into fixed-size character chunks.
+        Splits the text and adjusts the chunk metadata to reflect the strategy.
         """
-        text = self._preprocess(text)
-        if not text:
-            return []
+        # Use the parent's robust splitting logic
+        chunks = super().split_text(text, source_document_id=source_document_id)
 
-        chunks: List[Chunk] = []
-        start_index = 0
-        sequence_number = 0
-        step = self.chunk_size - self.chunk_overlap
+        # Set the correct strategy name for metadata purposes
+        for chunk in chunks:
+            chunk.chunking_strategy_used = "fixed_size"
 
-        while start_index < len(text):
-            end_index = start_index + self.chunk_size
-            chunk_content = text[start_index:end_index]
-
-            if not chunk_content:
-                break
-
-            chunk = Chunk(
-                content=chunk_content,
-                start_index=start_index,
-                end_index=start_index + len(chunk_content),
-                sequence_number=sequence_number,
-                source_document_id=source_document_id,
-                chunking_strategy_used="fixed_size",
-            )
-            chunks.append(chunk)
-
-            start_index += step
-            sequence_number += 1
-
-        return self._enforce_minimum_chunk_size(chunks)
+        return chunks
