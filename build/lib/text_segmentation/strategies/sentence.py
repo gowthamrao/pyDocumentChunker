@@ -93,15 +93,16 @@ class SentenceSplitter(TextSplitter):
         chunks: List[Chunk] = []
         current_chunk_sents: List[Tuple[str, int, int]] = []
 
-        i = 0
-        while i < len(processed_sentences):
-            sent, start, end = processed_sentences[i]
+        for sent, start, end in processed_sentences:
+            # Join the current sentences with a space to check the length
+            potential_content = " ".join(s[0] for s in current_chunk_sents + [(sent, start, end)])
 
-            current_content = " ".join(s[0] for s in current_chunk_sents)
-            if current_chunk_sents and self.length_function(current_content + " " + sent) > self.chunk_size:
+            if self.length_function(potential_content) > self.chunk_size and current_chunk_sents:
+                # Finalize the current chunk
+                final_content = " ".join(s[0] for s in current_chunk_sents)
                 chunks.append(
                     Chunk(
-                        content=current_content,
+                        content=final_content,
                         start_index=current_chunk_sents[0][1],
                         end_index=current_chunk_sents[-1][2],
                         sequence_number=len(chunks),
@@ -110,18 +111,18 @@ class SentenceSplitter(TextSplitter):
                     )
                 )
 
+                # Start a new chunk with overlap
                 overlap_idx = max(0, len(current_chunk_sents) - self.overlap_sentences)
                 current_chunk_sents = current_chunk_sents[overlap_idx:]
-                continue
 
             current_chunk_sents.append((sent, start, end))
-            i += 1
 
+        # Add the last remaining chunk
         if current_chunk_sents:
-            content = " ".join(s[0] for s in current_chunk_sents)
+            final_content = " ".join(s[0] for s in current_chunk_sents)
             chunks.append(
                 Chunk(
-                    content=content,
+                    content=final_content,
                     start_index=current_chunk_sents[0][1],
                     end_index=current_chunk_sents[-1][2],
                     sequence_number=len(chunks),
