@@ -78,22 +78,23 @@ class CodeSplitter(TextSplitter):
             chunk_size=self.chunk_size,
             chunk_overlap=self.chunk_overlap,
             length_function=self.length_function,
+            normalize_whitespace=self.normalize_whitespace,
+            unicode_normalize=self.unicode_normalize,
         )
 
     def _node_to_chunks(
         self, node: Node, text_bytes: bytes, source_document_id: Optional[str]
     ) -> List[Chunk]:
         """Recursively splits a tree-sitter node into chunks."""
-        chunks = []
         node_text = text_bytes[node.start_byte : node.end_byte].decode("utf-8")
 
         if self.length_function(node_text) <= self.chunk_size:
             return [
                 Chunk(
                     content=node_text,
-                    start_index=node.start_byte, # Note: using bytes for indices
+                    start_index=node.start_byte,  # Note: using bytes for indices
                     end_index=node.end_byte,
-                    sequence_number=0, # Will be re-sequenced later
+                    sequence_number=0,  # Will be re-sequenced later
                     source_document_id=source_document_id,
                     chunking_strategy_used="code",
                 )
@@ -114,15 +115,18 @@ class CodeSplitter(TextSplitter):
         # No suitable children to split by, use fallback splitter
         fallback_chunks = self._fallback_splitter.split_text(node_text, source_document_id)
         for chunk in fallback_chunks:
-            chunk.start_index += node.start_byte # Adjust index to be relative to the whole document
+            chunk.start_index += node.start_byte  # Adjust index to be relative to the whole document
             chunk.end_index += node.start_byte
         return fallback_chunks
-
 
     def split_text(
         self, text: str, source_document_id: Optional[str] = None
     ) -> List[Chunk]:
         """Splits the source code using its syntax tree."""
+        text = self._preprocess(text)
+        if not text:
+            return []
+
         text_bytes = text.encode("utf-8")
         tree = self.parser.parse(text_bytes)
         root_node = tree.root_node
@@ -137,4 +141,4 @@ class CodeSplitter(TextSplitter):
         for i, chunk in enumerate(chunks):
             chunk.sequence_number = i
 
-        return chunks
+        return self._enforce_minimum_chunk_size(chunks)

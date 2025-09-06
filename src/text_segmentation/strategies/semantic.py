@@ -61,11 +61,20 @@ class SemanticSplitter(TextSplitter):
         self.breakpoint_method = breakpoint_method
         self.breakpoint_threshold = breakpoint_threshold
 
-        self._sentence_splitter = SentenceSplitter()
+        # This splitter manages its own chunking logic, so we pass a default size
+        # to the parent, but it won't be directly used for splitting.
+        self._sentence_splitter = SentenceSplitter(
+            length_function=self.length_function,
+            chunk_size=self.chunk_size,
+            normalize_whitespace=self.normalize_whitespace,
+            unicode_normalize=self.unicode_normalize,
+        )
         self._fallback_splitter = RecursiveCharacterSplitter(
             chunk_size=self.chunk_size,
             chunk_overlap=self.chunk_overlap,
             length_function=self.length_function,
+            normalize_whitespace=self.normalize_whitespace,
+            unicode_normalize=self.unicode_normalize,
         )
 
     def _calculate_similarities(self, embeddings: np.ndarray) -> np.ndarray:
@@ -77,9 +86,12 @@ class SemanticSplitter(TextSplitter):
         self, text: str, source_document_id: Optional[str] = None
     ) -> List[Chunk]:
         """Splits the text based on semantic breakpoints."""
-        # 1. Get sentences as the base unit for comparison.
+        # Preprocessing is handled by the initial sentence splitter.
+        # No need to call self._preprocess(text) here to avoid double-processing.
         sentences = self._sentence_splitter.split_text(text)
         if len(sentences) < 2:
+            # If there's only one sentence, just use the fallback splitter
+            # which will respect the chunk size.
             return self._fallback_splitter.split_text(text, source_document_id)
 
         sentence_texts = [s.content for s in sentences]
@@ -138,4 +150,4 @@ class SemanticSplitter(TextSplitter):
             else:
                 final_chunks.append(Chunk(content=content, start_index=group_start_char_idx, end_index=last_group[-1].end_index, sequence_number=sequence_number, source_document_id=source_document_id, chunking_strategy_used="semantic"))
 
-        return final_chunks
+        return self._enforce_minimum_chunk_size(final_chunks)

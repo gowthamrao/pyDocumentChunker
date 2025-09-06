@@ -120,6 +120,10 @@ class RecursiveCharacterSplitter(TextSplitter):
         Returns:
             A list of `Chunk` objects.
         """
+        text = self._preprocess(text)
+        if not text:
+            return []
+
         # Stage 1: Recursively split text into indexed fragments
         fragments = self._recursive_split(text, self._separators, 0)
 
@@ -191,4 +195,4 @@ class RecursiveCharacterSplitter(TextSplitter):
                 current_chunk.overlap_content_next = overlap_content
                 next_chunk.overlap_content_previous = overlap_content
 
-        return chunks
+        return self._enforce_minimum_chunk_size(chunks)

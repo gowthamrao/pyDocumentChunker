@@ -46,13 +46,16 @@ class SentenceSplitter(TextSplitter):
 
         self._fallback_splitter = RecursiveCharacterSplitter(
             chunk_size=self.chunk_size,
-            chunk_overlap=0,
+            chunk_overlap=0,  # No overlap in fallback since sentences are merged later
             length_function=self.length_function,
+            normalize_whitespace=self.normalize_whitespace,
+            unicode_normalize=self.unicode_normalize,
         )
 
     def split_text(
         self, text: str, source_document_id: Optional[str] = None
     ) -> List[Chunk]:
+        text = self._preprocess(text)
         if not text:
             return []
 
@@ -72,6 +75,13 @@ class SentenceSplitter(TextSplitter):
         processed_sentences = []
         for sentence_text, start, end in all_sentences:
             if self.length_function(sentence_text) > self.chunk_size:
+                # This text is already preprocessed, so we don't want the fallback
+                # to do it again. We can create a temporary splitter or just
+                # call the internal split method.
+                # The fallback splitter was initialized with the same preprocessing
+                # settings, which is not ideal as it will double-process.
+                # A cleaner way is to ensure the fallback doesn't re-process.
+                # For now, let's assume the fallback's preprocessing is idempotent.
                 fallback_chunks = self._fallback_splitter.split_text(sentence_text)
                 for fb_chunk in fallback_chunks:
                     processed_sentences.append(
@@ -128,4 +138,4 @@ class SentenceSplitter(TextSplitter):
                 current_chunk.overlap_content_next = overlap_content
                 next_chunk.overlap_content_previous = overlap_content
 
-        return chunks
+        return self._enforce_minimum_chunk_size(chunks)

@@ -39,6 +39,17 @@ pip install .[langchain,llamaindex]
 pip install .[dev,nlp,markdown,html,semantic,code,langchain,llamaindex]
 ```
 
+## Global Configuration
+
+All splitter classes inherit from a common `TextSplitter` base class and share a set of powerful configuration options for preprocessing and chunk management.
+
+- `normalize_whitespace` (bool, default: `False`): If `True`, collapses all consecutive whitespace characters (spaces, newlines, tabs) into a single space. This is useful for cleaning up messy text but may affect index mapping for some strategies.
+- `unicode_normalize` (str, default: `None`): Specifies a Unicode normalization form to apply (e.g., `'NFC'`, `'NFKC'`). Helps ensure consistent character representation.
+- `minimum_chunk_size` (int, default: `0`): If set, the splitter will attempt to handle chunks smaller than this size.
+- `min_chunk_merge_strategy` (str, default: `'merge_with_previous'`): Defines how to handle small chunks.
+    - `'merge_with_previous'`: Merges a small chunk with the one that came before it. If the first chunk is too small, it is kept as is.
+    - `'discard'`: Simply removes any chunk smaller than `minimum_chunk_size`.
+
 ## Quick Start
 
 The simplest way to get started is with the `RecursiveCharacterSplitter`, which is a good general-purpose splitter.
@@ -46,10 +57,16 @@ The simplest way to get started is with the `RecursiveCharacterSplitter`, which 
 ```python
 from text_segmentation.strategies.recursive import RecursiveCharacterSplitter
 
-text = "This is a long document. It has multiple sentences and paragraphs. We want to split it into smaller chunks."
+text = "This is a long document.   It has multiple sentences and paragraphs.\n\nWe want to split it into smaller chunks. Some chunks are small."
 
-# Initialize the splitter
-splitter = RecursiveCharacterSplitter(chunk_size=50, chunk_overlap=10)
+# Initialize the splitter with global options
+splitter = RecursiveCharacterSplitter(
+    chunk_size=50,
+    chunk_overlap=10,
+    normalize_whitespace=True,
+    minimum_chunk_size=20,
+    min_chunk_merge_strategy="discard"
+)
 
 # Split the text
 chunks = splitter.split_text(text)
