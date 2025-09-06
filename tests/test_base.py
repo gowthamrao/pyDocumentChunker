@@ -132,6 +132,27 @@ class TestBaseFunctionality:
         assert "\x00" not in chunks[0].content
         assert chunks[0].content == "This text contains a null byte."
 
+    def test_preprocess_removes_bom(self):
+        """
+        Tests that the UTF-8 Byte-Order Mark (BOM) is stripped from the
+        beginning of the text during preprocessing, as per FRD R-2.2.2.
+        """
+        text_with_bom = "\ufeffThis text starts with a BOM."
+        expected_text = "This text starts with a BOM."
+
+        # Instantiate any concrete splitter to get access to the _preprocess method
+        splitter = FixedSizeSplitter(chunk_size=100, chunk_overlap=0)
+
+        # Directly test the internal _preprocess method
+        processed_text = splitter._preprocess(text_with_bom)
+
+        assert processed_text == expected_text
+        assert not processed_text.startswith("\ufeff")
+
+        # Also test it as part of the full split_text pipeline
+        chunks = splitter.split_text(text_with_bom)
+        assert chunks[0].content == expected_text
+
     def test_runt_handling_at_boundaries(self):
         """
         Tests that runts at the beginning or end of a list are handled correctly,

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any, Dict, List, Optional, Set
 
 from text_segmentation.base import TextSplitter
@@ -6,7 +8,7 @@ from text_segmentation.strategies.recursive import RecursiveCharacterSplitter
 
 try:
     from tree_sitter import Language, Node, Parser
-    from tree_sitter_languages import get_language, get_parser
+    from tree_sitter_language_pack import get_language, get_parser
 except ImportError:
     Parser = None  # type: ignore
 
