@@ -80,3 +80,22 @@ def test_dependency_import_error():
 
     # The with block automatically restores sys.modules, so the module is
     # usable by other tests. Another reload is not necessary.
+
+@pytest.mark.skipif(not NLTK_AVAILABLE, reason="NLTK or its 'punkt' model is not available")
+def test_invalid_nlp_backend_raises_error():
+    with pytest.raises(ValueError, match="Currently, only the 'nltk' backend is supported."):
+        SentenceSplitter(nlp_backend="unsupported")
+
+@pytest.mark.skipif(not NLTK_AVAILABLE, reason="NLTK or its 'punkt' model is not available")
+def test_negative_overlap_sentences_raises_error():
+    import importlib
+    import text_segmentation.strategies.sentence
+    importlib.reload(text_segmentation.strategies.sentence)
+    from text_segmentation.strategies.sentence import SentenceSplitter
+    with pytest.raises(ValueError, match="overlap_sentences must be a non-negative integer."):
+        SentenceSplitter(overlap_sentences=-1)
+
+@pytest.mark.skipif(not NLTK_AVAILABLE, reason="NLTK or its 'punkt' model is not available")
+def test_empty_text_returns_empty_list():
+    splitter = SentenceSplitter()
+    assert splitter.split_text("") == []

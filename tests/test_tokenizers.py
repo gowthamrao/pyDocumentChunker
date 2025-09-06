@@ -50,6 +50,14 @@ def test_recursive_splitter_with_tiktoken():
             f"which exceeds the chunk_size of 8."
         )
 
+
+def test_from_tiktoken_invalid_encoding():
+    """
+    Tests that from_tiktoken raises an exception for an invalid encoding name.
+    """
+    with pytest.raises(Exception, match="Failed to load tiktoken encoding"):
+        from_tiktoken("invalid-encoding-name")
+
 def test_from_tiktoken_caching():
     """
     Tests that the from_tiktoken utility caches the length function.
