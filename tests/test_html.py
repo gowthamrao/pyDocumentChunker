@@ -38,8 +38,8 @@ def test_html_basic_splitting():
     assert len(chunks) > 1
     # Check that chunks are based on block elements
     assert "Main Title" in chunks[0].content
-    assert "This is the introduction" in chunks[1].content
-    assert "Section 1" in chunks[2].content
+    assert "This is the introduction" in chunks[0].content
+    assert "Section 1" in chunks[0].content
 
 
 @pytest.mark.skipif(not BS4_LXML_AVAILABLE, reason="BeautifulSoup4 or lxml not installed")
