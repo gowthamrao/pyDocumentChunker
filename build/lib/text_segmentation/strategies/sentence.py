@@ -135,4 +135,4 @@ class SentenceSplitter(TextSplitter):
         # Post-process to add overlap metadata using the shared utility.
         _populate_overlap_metadata(chunks, text)
 
-        return self._enforce_minimum_chunk_size(chunks)
+        return self._enforce_minimum_chunk_size(chunks, text)

@@ -115,4 +115,10 @@ class MarkdownSplitter(TextSplitter):
 
             current_pos = section_start_index + len(section_text)
 
-        return self._enforce_minimum_chunk_size(chunks)
+        # First, populate the overlap metadata based on the chunks we have.
+        from text_segmentation.utils import _populate_overlap_metadata
+        _populate_overlap_metadata(chunks, text)
+
+        # Then, enforce the minimum chunk size, which will correctly recalculate
+        # the overlap metadata after any merges.
+        return self._enforce_minimum_chunk_size(chunks, text)

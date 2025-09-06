@@ -5,6 +5,7 @@ tree-sitter-languages>=1.10.0
 
 [dev]
 pytest>=8.0.0
+advanced-text-segmentation[tokenizers]
 
 [html]
 beautifulsoup4>=4.12.3
@@ -28,3 +29,6 @@ numpy>=1.26
 
 [spacy]
 spacy>=3.7.0
+
+[tokenizers]
+tiktoken>=0.7.0
