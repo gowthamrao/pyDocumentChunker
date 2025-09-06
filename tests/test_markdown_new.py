@@ -150,3 +150,53 @@ def test_complex_document_structure_and_indices():
 
     quote_content = "> This is a blockquote.\n> It can span multiple lines."
     assert COMPLEX_MD[chunks[10].start_index:chunks[10].end_index].strip() == quote_content
+
+
+def test_oversized_block_fallback_preserves_correct_indices():
+    """
+    When a block is split by the fallback, the sub-chunks must have correct
+    indices relative to the original document, not the block content.
+    """
+    header = "# Title\n\n"
+    # This paragraph will be split into three by the fallback splitter
+    long_paragraph = "This is the first sentence. This is the second sentence. This is the third sentence."
+    text = header + long_paragraph
+
+    # The long paragraph starts after the header
+    paragraph_start_index = len(header)
+    paragraph_end_index = len(text)
+
+    # We expect the fallback to split on ". "
+    # Chunk 1: "This is the first sentence." (27 chars) -> start=20, end=47
+    # Chunk 2: "This is the second sentence." (28 chars) -> start=48, end=76
+    # Chunk 3: "This is the third sentence." (27 chars) -> start=77, end=104
+
+    # chunk_size=30 forces a split, chunk_overlap=0 makes indices easy to check
+    splitter = MarkdownSplitter(chunk_size=30, chunk_overlap=0)
+    chunks = splitter.split_text(text)
+
+    assert len(chunks) == 4 # Header, plus 3 fallback chunks
+    assert chunks[0].content == "# Title"
+
+    # The fallback chunks should have the 'markdown-fallback' strategy tag
+    assert chunks[1].chunking_strategy_used == "markdown-fallback"
+    assert chunks[2].chunking_strategy_used == "markdown-fallback"
+    assert chunks[3].chunking_strategy_used == "markdown-fallback"
+
+    # This is the crucial test: The indices must be relative to the original `text`
+    # The current implementation fails here, setting all start_indices to `paragraph_start_index`
+
+    # First fallback chunk
+    assert chunks[1].content.strip() == "This is the first sentence."
+    assert chunks[1].start_index == paragraph_start_index
+    # The bug: the end_index is for the whole block, not the sub-chunk
+    assert chunks[1].end_index == paragraph_start_index + len(chunks[1].content)
+
+    # Second fallback chunk
+    assert chunks[2].content.strip() == "This is the second sentence."
+    # The bug: current implementation will set start_index to the block start.
+    assert chunks[2].start_index == paragraph_start_index + len(chunks[1].content)
+
+    # Last fallback chunk
+    assert chunks[3].content.strip() == "This is the third sentence."
+    assert chunks[3].end_index == paragraph_end_index
