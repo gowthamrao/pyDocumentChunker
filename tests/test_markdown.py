@@ -37,10 +37,10 @@ def test_markdown_basic_splitting():
     chunks = splitter.split_text(MARKDOWN_TEXT)
 
     assert len(chunks) == 3
-    assert chunks[0].content.strip().startswith("Main Title")
+    assert chunks[0].content.strip().startswith("# Main Title")
     assert chunks[0].content.strip().endswith("This is the introduction.")
-    assert chunks[1].content.strip().startswith("Section 1")
-    assert chunks[2].content.strip().startswith("Section 2")
+    assert chunks[1].content.strip().startswith("## Section 1")
+    assert chunks[2].content.strip().startswith("## Section 2")
 
 @pytest.mark.skipif(not MARKDOWN_IT_AVAILABLE, reason="markdown-it-py not installed")
 def test_markdown_hierarchical_context():
@@ -72,7 +72,7 @@ def test_markdown_fallback_splitting():
     assert len(chunks) > 1
     # Check that the context is preserved in fallback chunks
     assert all(c.hierarchical_context.get("H1") == "Title" for c in chunks)
-    assert "".join(c.content for c in chunks).strip().startswith("Title\na a a")
+    assert "".join(c.content for c in chunks).strip().startswith("# Title\na a a")
 
 
 @pytest.mark.skipif(not MARKDOWN_IT_AVAILABLE, reason="markdown-it-py not installed")
