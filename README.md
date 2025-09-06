@@ -20,8 +20,8 @@ You can install the core package and its dependencies using pip. The package is 
 # Install the core package
 pip install .
 
-# To include support for sentence splitting (via NLTK)
-pip install .[nlp]
+# To include support for sentence splitting (via NLTK or Spacy)
+pip install .[nlp,spacy]
 
 # To include support for Markdown and HTML splitting
 pip install .[markdown,html]
@@ -124,12 +124,23 @@ chunks = splitter.split_text(my_text)
 ```
 
 ### SentenceSplitter
-Splits text based on sentence boundaries, then aggregates sentences into chunks. Requires the `[nlp]` extra.
+Splits text based on sentence boundaries using NLTK, then aggregates sentences into chunks. Requires the `[nlp]` extra.
 
 ```python
-from text_segmentation.strategies.sentence import SentenceSplitter
+from text_segmentation.strategies import SentenceSplitter
 # Ensure you have run: python -c "import nltk; nltk.download('punkt')"
 splitter = SentenceSplitter(chunk_size=1024, overlap_sentences=1)
+chunks = splitter.split_text(my_prose_text)
+```
+
+### SpacySentenceSplitter
+A more advanced sentence splitter that uses `spacy` for higher accuracy sentence boundary detection. It functions similarly to the NLTK-based splitter but often provides better results for complex texts. Requires the `[spacy]` extra.
+
+```python
+from text_segmentation.strategies import SpacySentenceSplitter
+# Ensure you have run: pip install .[spacy]
+# And downloaded the model: python -m spacy download en_core_web_sm
+splitter = SpacySentenceSplitter(chunk_size=1024, overlap_sentences=1)
 chunks = splitter.split_text(my_prose_text)
 ```
 
