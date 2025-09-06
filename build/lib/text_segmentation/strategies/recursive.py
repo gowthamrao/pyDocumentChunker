@@ -47,23 +47,39 @@ class RecursiveCharacterSplitter(TextSplitter):
         self._keep_separator = keep_separator
 
     def _split_text_with_separator(self, text: str, separator: str) -> List[str]:
-        """Splits text by a separator, optionally keeping the separator."""
+        """
+        Splits text by a separator, robustly handling regex patterns.
+
+        This method uses a capturing group in `re.split` to ensure that the
+        separator is kept, and it works for both fixed-width and variable-width
+        regex patterns.
+        """
         if not separator:
             return list(text)
 
-        if self._keep_separator:
-            # Use a lookbehind assertion to keep the separator with the preceding part.
-            # The regex splits the text *after* the separator.
-            # e.g., "a.b.c" split by "." -> ["a.", "b.", "c"]
-            try:
-                splits = re.split(f"(?<={separator})", text)
-            except re.error:
-                # Fallback for complex separators that don't work with lookbehind
-                splits = text.split(separator)
-        else:
-            splits = re.split(separator, text)
+        # Use re.split with a capturing group `()` to keep the separator.
+        # e.g., re.split('(a)', 'b-a-c') -> ['b-', 'a', '-c']
+        # This works for variable-width patterns, unlike the lookbehind approach.
+        splits = re.split(f"({separator})", text)
 
-        return [s for s in splits if s]
+        if not self._keep_separator:
+            # If we don't want to keep the separator, we can just return the
+            # parts of the split that are not the separator itself. The separator
+            # will be every other element in the list starting from index 1.
+            return [s for s in splits[::2] if s]
+
+        # Merge the separator with the preceding part of the text
+        # ['b-', 'a', '-c'] -> ['b-a', '-c']
+        merged_splits = []
+        for i in range(0, len(splits), 2):
+            # The fragment is at the even index
+            fragment = splits[i]
+            # The separator is at the odd index, if it exists
+            separator_part = splits[i + 1] if i + 1 < len(splits) else ""
+            if fragment or separator_part:
+                merged_splits.append(fragment + separator_part)
+
+        return [s for s in merged_splits if s]
 
     def _recursive_split(
         self, text: str, separators: List[str], start_index: int
