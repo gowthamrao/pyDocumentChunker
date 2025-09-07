@@ -1,5 +1,4 @@
 import pytest
-
 from pyDocumentChunker import CodeSplitter
 
 # Sample code snippets for testing
@@ -16,6 +15,7 @@ class MyClass:
     def get_x(self):
         return self.x
 '''
+
 
 def test_split_python_by_toplevel_constructs():
     """
@@ -64,6 +64,7 @@ def very_large_function():
     return a + b + c + d + e + f + g + h + i + j
 """
 
+
 def test_fallback_splitter_for_large_node():
     """
     Tests that if a single code construct (like a function) is larger than
@@ -91,6 +92,7 @@ const add = (a, b) => {
 };
 """
 
+
 def test_split_javascript_code():
     """
     Tests that the splitter works correctly for a different language (JS).
@@ -111,6 +113,7 @@ def test_unsupported_language_raises_error():
     with pytest.raises(ValueError, match="is not supported or could not be loaded"):
         CodeSplitter(language="not_a_real_language")
 
+
 def test_import_error_if_tree_sitter_not_installed(monkeypatch):
     """
     Tests that an ImportError is raised if tree-sitter is not installed.
@@ -119,11 +122,13 @@ def test_import_error_if_tree_sitter_not_installed(monkeypatch):
     with pytest.raises(ImportError, match="tree-sitter is not installed"):
         CodeSplitter(language="python")
 
+
 def test_empty_and_whitespace_code():
     """Tests that empty or whitespace-only code returns an empty list."""
     splitter = CodeSplitter(language="python")
     assert splitter.split_text("") == []
     assert splitter.split_text("   \n \t ") == []
+
 
 def test_no_chunkable_nodes_uses_fallback():
     """

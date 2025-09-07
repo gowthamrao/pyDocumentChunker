@@ -1,6 +1,7 @@
 import pytest
 from pyDocumentChunker import Chunk
 
+
 def test_chunk_post_init_validations():
     """
     Tests that the Chunk __post_init__ method raises ValueErrors for invalid inputs.
@@ -8,11 +9,16 @@ def test_chunk_post_init_validations():
     with pytest.raises(ValueError, match="start_index must be a non-negative integer."):
         Chunk(content="test", start_index=-1, end_index=10, sequence_number=0)
 
-    with pytest.raises(ValueError, match="end_index must not be less than start_index."):
+    with pytest.raises(
+        ValueError, match="end_index must not be less than start_index."
+    ):
         Chunk(content="test", start_index=10, end_index=5, sequence_number=0)
 
-    with pytest.raises(ValueError, match="sequence_number must be a non-negative integer."):
+    with pytest.raises(
+        ValueError, match="sequence_number must be a non-negative integer."
+    ):
         Chunk(content="test", start_index=0, end_index=10, sequence_number=-1)
+
 
 def test_chunk_to_dict():
     """
@@ -28,7 +34,7 @@ def test_chunk_to_dict():
         overlap_content_previous="prev",
         overlap_content_next="next",
         chunking_strategy_used="test_strategy",
-        metadata={"key": "value"}
+        metadata={"key": "value"},
     )
     chunk_dict = chunk.to_dict()
 

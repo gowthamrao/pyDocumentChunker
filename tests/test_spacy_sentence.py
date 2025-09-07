@@ -1,29 +1,35 @@
 import pytest
+from pyDocumentChunker import SpacySentenceSplitter
 
 # Mark the entire module as skipping if spacy is not available
-spacy = pytest.importorskip("spacy", reason="Spacy is not installed, skipping spacy-related tests.")
+spacy = pytest.importorskip(
+    "spacy", reason="Spacy is not installed, skipping spacy-related tests."
+)
 
 # Ensure the model is available before running tests
 try:
     spacy.load("en_core_web_sm")
 except OSError:
-    pytest.skip("Spacy model 'en_core_web_sm' not found, skipping tests.", allow_module_level=True)
+    pytest.skip(
+        "Spacy model 'en_core_web_sm' not found, skipping tests.",
+        allow_module_level=True,
+    )
 
-
-from pyDocumentChunker import SpacySentenceSplitter
 
 # A sample text for testing, with multiple sentences of varying length.
 SAMPLE_TEXT = (
     "This is the first sentence. It is relatively short. "
     "Here is a much longer second sentence, designed to test the aggregation logic and ensure that chunks are created correctly. "
     "The third sentence follows. Finally, a fourth sentence to round things out."
-) # Raw length: 251
+)  # Raw length: 251
+
 
 def test_spacy_initialization():
     """Tests that the splitter can be initialized."""
     splitter = SpacySentenceSplitter(chunk_size=100)
     assert splitter is not None
     assert splitter.chunk_size == 100
+
 
 def test_basic_sentence_splitting():
     """Tests that the text is split into sentences and then aggregated into chunks."""
@@ -38,6 +44,7 @@ def test_basic_sentence_splitting():
     assert "It is relatively short." in chunks[0].content
     assert "Here is a much longer second sentence" in chunks[1].content
     assert "Finally, a fourth sentence" in chunks[2].content
+
 
 def test_chunk_size_constraint_with_fallback():
     """Tests that no chunk exceeds the chunk_size, especially with a fallback."""
@@ -54,12 +61,20 @@ def test_chunk_size_constraint_with_fallback():
     assert len(chunks) == 4
     for chunk in chunks:
         assert len(chunk.content) <= 100
-        assert chunk.chunking_strategy_used in ["spacy_sentence", "spacy_sentence_fallback"]
+        assert chunk.chunking_strategy_used in [
+            "spacy_sentence",
+            "spacy_sentence_fallback",
+        ]
 
     assert chunks[0].content == "This is the first sentence. It is relatively short."
-    assert chunks[3].content == "The third sentence follows. Finally, a fourth sentence to round things out."
+    assert (
+        chunks[3].content
+        == "The third sentence follows. Finally, a fourth sentence to round things out."
+    )
     # Check that the fallback chunks roughly make up the original sentence
-    assert "Here is a much longer second sentence" in (chunks[1].content + chunks[2].content)
+    assert "Here is a much longer second sentence" in (
+        chunks[1].content + chunks[2].content
+    )
 
 
 def test_sentence_overlap():
@@ -107,6 +122,7 @@ def test_sentence_overlap():
     assert chunks[1].content.endswith("created correctly.")
     assert chunks[2].content.startswith("Here is a much longer")
 
+
 def test_fallback_splitter_for_long_sentence():
     """Tests that a single sentence longer than chunk_size is split by the fallback."""
     long_sentence = "This is a single, very long sentence that is intentionally made to be much larger than the chunk size to verify that the fallback mechanism correctly splits it into smaller pieces."
@@ -118,11 +134,13 @@ def test_fallback_splitter_for_long_sentence():
         assert len(chunk.content) <= 50
     # The problematic join assertion is removed. The two assertions above are sufficient.
 
+
 def test_empty_and_whitespace_text():
     """Tests that the splitter handles empty or whitespace-only text gracefully."""
     splitter = SpacySentenceSplitter()
     assert splitter.split_text("") == []
     assert splitter.split_text("   \n \t ") == []
+
 
 def test_metadata_correctness():
     """Tests that the chunk metadata (indices, sequence) is correct."""
@@ -140,21 +158,28 @@ def test_metadata_correctness():
     # Chunk 2
     assert chunks[1].sequence_number == 1
     assert chunks[1].start_index == 52
-    assert chunks[1].content == "Here is a much longer second sentence, designed to test the aggregation logic and ensure that chunks are created correctly."
+    assert (
+        chunks[1].content
+        == "Here is a much longer second sentence, designed to test the aggregation logic and ensure that chunks are created correctly."
+    )
     assert chunks[1].end_index == 175
 
     # Chunk 3
     assert chunks[2].sequence_number == 2
     assert chunks[2].start_index == 176
-    assert chunks[2].content == "The third sentence follows. Finally, a fourth sentence to round things out."
+    assert (
+        chunks[2].content
+        == "The third sentence follows. Finally, a fourth sentence to round things out."
+    )
     assert chunks[2].end_index == 251
+
 
 def test_import_error_if_spacy_not_installed(monkeypatch):
     """
     Tests that SpacySentenceSplitter raises an ImportError if spacy is not installed.
     """
-    import sys
     import importlib
+    import sys
 
     monkeypatch.setitem(sys.modules, "spacy", None)
 
@@ -168,9 +193,11 @@ def test_import_error_if_spacy_not_installed(monkeypatch):
     with pytest.raises(ImportError, match="Spacy is not installed"):
         spacy_sentence.SpacySentenceSplitter()
 
+
 def test_model_not_found_error(monkeypatch):
     """Tests an informative error is raised if the model is not downloaded."""
     import importlib
+
     from pyDocumentChunker.strategies import spacy_sentence
 
     def mock_load_error(model_name):

@@ -1,13 +1,17 @@
-import pytest
 from typing import List
+from unittest.mock import patch
+
+import pytest
 
 # Attempt to import numpy to determine if tests should be skipped.
 try:
     import numpy as np
     from pyDocumentChunker.strategies.semantic import SemanticSplitter
+
     NUMPY_AVAILABLE = True
 except ImportError:
     NUMPY_AVAILABLE = False
+
 
 # A mock embedding function for testing.
 # Sentences about topic A get similar vectors.
@@ -19,15 +23,17 @@ def mock_embedding_function(texts: List[str]) -> "np.ndarray":
             embeddings.append([1.0, 0.0, 0.0])
         elif "Topic B" in text:
             embeddings.append([0.0, 1.0, 0.0])
-        else: # transition or noise
+        else:  # transition or noise
             embeddings.append([0.0, 0.0, 1.0])
     return np.array(embeddings)
+
 
 TEXT_FOR_SEMANTIC_SPLIT = (
     "This is a sentence about Topic A. Here is another sentence on Topic A. "
     "This sentence is a transition. "
     "Now we talk about Topic B. And here is more on Topic B."
 )
+
 
 @pytest.mark.skipif(not NUMPY_AVAILABLE, reason="Numpy is not available")
 def test_semantic_splitting_identifies_breakpoints():
@@ -40,7 +46,7 @@ def test_semantic_splitting_identifies_breakpoints():
     splitter = SemanticSplitter(
         embedding_function=mock_embedding_function,
         breakpoint_method="percentile",
-        breakpoint_threshold=50
+        breakpoint_threshold=50,
     )
     chunks = splitter.split_text(TEXT_FOR_SEMANTIC_SPLIT)
 
@@ -49,12 +55,18 @@ def test_semantic_splitting_identifies_breakpoints():
     # Chunk 2: The transition sentence
     # Chunk 3: Sentences about Topic B
     assert len(chunks) == 3
-    assert chunks[0].content == "This is a sentence about Topic A. Here is another sentence on Topic A."
+    assert (
+        chunks[0].content
+        == "This is a sentence about Topic A. Here is another sentence on Topic A."
+    )
     assert chunks[1].content == "This sentence is a transition."
-    assert chunks[2].content == "Now we talk about Topic B. And here is more on Topic B."
+    assert (
+        chunks[2].content == "Now we talk about Topic B. And here is more on Topic B."
+    )
     # No overlap should be generated when not using a fallback splitter with overlap
     assert chunks[0].overlap_content_next is None
     assert chunks[1].overlap_content_previous is None
+
 
 @pytest.mark.skipif(not NUMPY_AVAILABLE, reason="Numpy is not available")
 def test_semantic_splitting_std_dev():
@@ -69,10 +81,11 @@ def test_semantic_splitting_std_dev():
     splitter = SemanticSplitter(
         embedding_function=mock_embedding_function,
         breakpoint_method="std_dev",
-        breakpoint_threshold=0.9
+        breakpoint_threshold=0.9,
     )
     chunks = splitter.split_text(TEXT_FOR_SEMANTIC_SPLIT)
     assert len(chunks) == 3
+
 
 @pytest.mark.skipif(not NUMPY_AVAILABLE, reason="Numpy is not available")
 def test_single_sentence_uses_fallback():
@@ -81,26 +94,28 @@ def test_single_sentence_uses_fallback():
     """
     text = "This is a single sentence, but it is very long, so it should be split by the fallback mechanism."
     splitter = SemanticSplitter(
-        embedding_function=mock_embedding_function,
-        chunk_size=50,
-        chunk_overlap=10
+        embedding_function=mock_embedding_function, chunk_size=50, chunk_overlap=10
     )
     chunks = splitter.split_text(text)
     # The fallback splitter should have been invoked.
     assert len(chunks) > 1
     assert len(chunks[0].content) <= 50
 
+
 @pytest.mark.skipif(not NUMPY_AVAILABLE, reason="Numpy is not available")
 def test_invalid_percentile_raises_error():
     """
     Tests that an invalid percentile value raises a ValueError.
     """
-    with pytest.raises(ValueError, match="Percentile threshold must be between 0 and 100"):
+    with pytest.raises(
+        ValueError, match="Percentile threshold must be between 0 and 100"
+    ):
         SemanticSplitter(
             embedding_function=mock_embedding_function,
             breakpoint_method="percentile",
-            breakpoint_threshold=101
+            breakpoint_threshold=101,
         )
+
 
 @pytest.mark.skipif(not NUMPY_AVAILABLE, reason="Numpy is not available")
 def test_semantic_splitting_absolute():
@@ -113,10 +128,11 @@ def test_semantic_splitting_absolute():
     splitter = SemanticSplitter(
         embedding_function=mock_embedding_function,
         breakpoint_method="absolute",
-        breakpoint_threshold=0.5
+        breakpoint_threshold=0.5,
     )
     chunks = splitter.split_text(TEXT_FOR_SEMANTIC_SPLIT)
     assert len(chunks) == 3
+
 
 @pytest.mark.skipif(not NUMPY_AVAILABLE, reason="Numpy is not available")
 def test_fallback_populates_overlap():
@@ -132,9 +148,9 @@ def test_fallback_populates_overlap():
     splitter = SemanticSplitter(
         embedding_function=mock_embedding_function,
         breakpoint_method="percentile",
-        breakpoint_threshold=95, # High threshold, should not split
+        breakpoint_threshold=95,  # High threshold, should not split
         chunk_size=100,
-        chunk_overlap=20 # This overlap is for the fallback splitter
+        chunk_overlap=20,  # This overlap is for the fallback splitter
     )
 
     chunks = splitter.split_text(text)
@@ -149,27 +165,30 @@ def test_fallback_populates_overlap():
     assert "Topic A part two" in chunks[1].content
     assert "about Topic A" in chunks[0].overlap_content_next
 
-from unittest.mock import patch
 
 def test_dependency_import_error():
     """
     Tests that an ImportError is raised if numpy is not installed.
     """
-    import sys
     import importlib
+    import sys
 
     try:
         with patch.dict(sys.modules, {"numpy": None}):
             import pyDocumentChunker.strategies.semantic
+
             importlib.reload(pyDocumentChunker.strategies.semantic)
 
             from pyDocumentChunker.strategies.semantic import SemanticSplitter
+
             with pytest.raises(ImportError, match="numpy is not installed"):
                 SemanticSplitter(embedding_function=lambda x: [])
     finally:
         # Restore the module to its original state
         import pyDocumentChunker.strategies.semantic
+
         importlib.reload(pyDocumentChunker.strategies.semantic)
+
 
 @pytest.mark.skipif(not NUMPY_AVAILABLE, reason="Numpy is not available")
 def test_fallback_on_last_group():
@@ -187,7 +206,7 @@ def test_fallback_on_last_group():
         breakpoint_method="absolute",
         breakpoint_threshold=0.5,
         chunk_size=50,
-        chunk_overlap=10
+        chunk_overlap=10,
     )
     chunks = splitter.split_text(text)
     # The first sentence is one chunk.
@@ -195,6 +214,7 @@ def test_fallback_on_last_group():
     assert len(chunks) > 2
     assert chunks[0].content == "This is a sentence about Topic A."
     assert "Topic B" in chunks[1].content
+
 
 @pytest.mark.skipif(not NUMPY_AVAILABLE, reason="Numpy is not available")
 def test_fallback_on_intermediate_group():
@@ -210,7 +230,7 @@ def test_fallback_on_intermediate_group():
         breakpoint_method="absolute",
         breakpoint_threshold=0.5,
         chunk_size=50,
-        chunk_overlap=10
+        chunk_overlap=10,
     )
     chunks = splitter.split_text(text)
     assert len(chunks) > 2

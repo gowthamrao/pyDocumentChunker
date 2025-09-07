@@ -1,13 +1,14 @@
-import pytest
 from unittest.mock import MagicMock, patch
-from pyDocumentChunker.integrations.llamaindex import LlamaIndexWrapper
+
+import pytest
 from pyDocumentChunker.base import TextSplitter
 from pyDocumentChunker.core import Chunk
+from pyDocumentChunker.integrations.llamaindex import LlamaIndexWrapper
 
 # Mock LlamaIndex classes if not installed
 try:
-    from llama_index.core.schema import Document, TextNode, BaseNode
     from llama_index.core.callbacks.base import CallbackManager
+    from llama_index.core.schema import BaseNode, Document, TextNode
 except ImportError:
     # Create dummy classes for testing if llama_index is not available
     class BaseNode:
@@ -15,8 +16,10 @@ except ImportError:
             self.text = text
             self.metadata = metadata or {}
             self.node_id = node_id
+
         def get_content(self):
             return self.text
+
         def as_related_node_info(self):
             return {"node_id": self.node_id}
 
@@ -31,6 +34,7 @@ except ImportError:
     class CallbackManager:
         pass
 
+
 # Mock TextSplitter for testing
 class MockTextSplitter(TextSplitter):
     def __init__(self, chunk_size=100, chunk_overlap=50, **kwargs):
@@ -40,25 +44,36 @@ class MockTextSplitter(TextSplitter):
         words = text.split()
         chunks = []
         for i in range(0, len(words), 2):
-            content = " ".join(words[i:i+2])
-            chunks.append(Chunk(content=content, start_index=0, end_index=len(content), sequence_number=i//2))
+            content = " ".join(words[i : i + 2])
+            chunks.append(
+                Chunk(
+                    content=content,
+                    start_index=0,
+                    end_index=len(content),
+                    sequence_number=i // 2,
+                )
+            )
         return chunks
+
 
 @pytest.fixture
 def mock_splitter():
     """Fixture for a mock text splitter."""
     return MockTextSplitter()
 
+
 def test_llamaindex_wrapper_init(mock_splitter):
     """Tests the initialization of the LlamaIndexWrapper."""
     wrapper = LlamaIndexWrapper(mock_splitter)
     assert wrapper.splitter is mock_splitter
+
 
 def test_from_defaults(mock_splitter):
     """Tests the factory method."""
     wrapper = LlamaIndexWrapper.from_defaults(mock_splitter)
     assert isinstance(wrapper, LlamaIndexWrapper)
     assert wrapper.splitter is mock_splitter
+
 
 @patch("pyDocumentChunker.integrations.llamaindex.TextNode")
 def test_chunk_to_node(mock_text_node, mock_splitter):
@@ -71,10 +86,11 @@ def test_chunk_to_node(mock_text_node, mock_splitter):
     wrapper = LlamaIndexWrapper(mock_splitter)
     wrapper._ensure_llamaindex_is_installed = MagicMock()
 
-    node = wrapper._chunk_to_node(chunk, source_node)
+    wrapper._chunk_to_node(chunk, source_node)
 
     mock_text_node.assert_called_once()
     assert mock_text_node.call_args[1]["text"] == "Hello world"
+
 
 @patch("pyDocumentChunker.integrations.llamaindex.TextNode")
 def test_parse_nodes(mock_text_node, mock_splitter):
@@ -88,13 +104,15 @@ def test_parse_nodes(mock_text_node, mock_splitter):
     wrapper = LlamaIndexWrapper(mock_splitter)
     wrapper._ensure_llamaindex_is_installed = MagicMock()
 
-    new_nodes = wrapper._parse_nodes(nodes)
+    wrapper._parse_nodes(nodes)
 
     assert mock_text_node.call_count == 2
+
 
 def test_class_name():
     """Tests the class_name method."""
     assert LlamaIndexWrapper.class_name() == "LlamaIndexWrapper"
+
 
 def test_import_error(mock_splitter):
     """

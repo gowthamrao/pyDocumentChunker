@@ -1,9 +1,10 @@
-import os
-import re
-import json
 import argparse
 import glob
-from typing import Dict, List, Iterator
+import json
+import os
+import re
+from typing import Dict, Iterator
+
 
 def chunk_by_section(
     content: str, max_chunk_words: int, file_path: str
@@ -29,16 +30,16 @@ def chunk_by_section(
     # Regex to split by Markdown headers (## or #).
     # The `(?=^##? )` is a positive lookahead that finds the location of headers
     # without consuming them in the split.
-    sections = re.split(r'(?=^##? )', content, flags=re.MULTILINE)
+    sections = re.split(r"(?=^##? )", content, flags=re.MULTILINE)
 
     # The first element might be some text before the first header (e.g., the main title).
     # We'll treat it as a section with a "Preamble" header.
-    if sections and not sections[0].strip().startswith('#'):
+    if sections and not sections[0].strip().startswith("#"):
         preamble = sections.pop(0).strip()
         if preamble:
             # Handle the case where the preamble itself is too long
             if len(preamble.split()) > max_chunk_words:
-                paragraphs = preamble.split('\n\n')
+                paragraphs = preamble.split("\n\n")
                 for i, para in enumerate(paragraphs):
                     para = para.strip()
                     if para:
@@ -50,7 +51,7 @@ def chunk_by_section(
                             },
                         }
             else:
-                 yield {
+                yield {
                     "text": preamble,
                     "metadata": {
                         "original_filename": os.path.basename(file_path),
@@ -65,7 +66,7 @@ def chunk_by_section(
             continue
 
         try:
-            header_line, body = section.split('\n', 1)
+            header_line, body = section.split("\n", 1)
             header = header_line.strip()
             body = body.strip()
         except ValueError:
@@ -89,7 +90,7 @@ def chunk_by_section(
             }
         else:
             # If the section is too long, split it into paragraphs.
-            paragraphs = body.split('\n\n')
+            paragraphs = body.split("\n\n")
             for i, para in enumerate(paragraphs):
                 para = para.strip()
                 if para:  # Ensure we don't yield empty paragraphs
@@ -101,9 +102,8 @@ def chunk_by_section(
                         },
                     }
 
-def process_documents(
-    input_dir: str, output_file: str, max_chunk_words: int
-) -> None:
+
+def process_documents(input_dir: str, output_file: str, max_chunk_words: int) -> None:
     """
     Processes all Markdown files in a directory, chunks them, and saves them to a JSONL file.
 
@@ -117,17 +117,17 @@ def process_documents(
 
     print(f"Found {len(md_files)} Markdown files to process.")
 
-    with open(output_file, 'w', encoding='utf-8') as f_out:
+    with open(output_file, "w", encoding="utf-8") as f_out:
         for file_path in md_files:
             print(f"Processing {file_path}...")
             try:
-                with open(file_path, 'r', encoding='utf-8') as f_in:
+                with open(file_path, "r", encoding="utf-8") as f_in:
                     content = f_in.read()
 
                 for chunk in chunk_by_section(content, max_chunk_words, file_path):
                     # Convert the chunk dictionary to a JSON string and write it to the file,
                     # followed by a newline to create the JSONL format.
-                    f_out.write(json.dumps(chunk) + '\n')
+                    f_out.write(json.dumps(chunk) + "\n")
             except Exception as e:
                 print(f"Error processing file {file_path}: {e}")
 
@@ -163,6 +163,7 @@ def main():
     args = parser.parse_args()
 
     process_documents(args.input_dir, args.output_file, args.max_chunk_words)
+
 
 if __name__ == "__main__":
     main()

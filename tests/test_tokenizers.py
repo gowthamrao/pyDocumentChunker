@@ -1,6 +1,6 @@
-import pytest
 from unittest.mock import patch
 
+import pytest
 from pyDocumentChunker import RecursiveCharacterSplitter
 from pyDocumentChunker.tokenizers import from_tiktoken
 
@@ -36,7 +36,7 @@ def test_recursive_splitter_with_tiktoken():
         chunk_size=8,
         chunk_overlap=2,
         length_function=length_function,
-        separators=[" "], # Split by space for granular control
+        separators=[" "],  # Split by space for granular control
     )
 
     chunks = splitter.split_text(text)
@@ -59,6 +59,7 @@ def test_from_tiktoken_invalid_encoding():
     with pytest.raises(Exception, match="Failed to load tiktoken encoding"):
         from_tiktoken("invalid-encoding-name")
 
+
 def test_from_tiktoken_caching():
     """
     Tests that the from_tiktoken utility caches the length function.
@@ -66,19 +67,24 @@ def test_from_tiktoken_caching():
     try:
         # Clear cache for a clean test
         from pyDocumentChunker import tokenizers
+
         tokenizers._tokenizer_cache.clear()
 
         func1 = from_tiktoken("cl100k_base")
         func2 = from_tiktoken("cl100k_base")
-        assert func1 is func2, "The from_tiktoken function should return the same cached object"
+        assert (
+            func1 is func2
+        ), "The from_tiktoken function should return the same cached object"
     except ImportError:
         pytest.skip("tiktoken is not installed, skipping token-based test.")
     except Exception:
         pytest.skip("Could not load tiktoken model, skipping token-based test.")
 
+
 def test_from_tiktoken_import_error():
     """Tests that an ImportError is raised if tiktoken is not installed."""
     from pyDocumentChunker import tokenizers
+
     tokenizers._tokenizer_cache.clear()
 
     with patch.dict("sys.modules", {"tiktoken": None}):

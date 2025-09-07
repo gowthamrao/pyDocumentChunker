@@ -1,4 +1,3 @@
-import pytest
 from pyDocumentChunker import RecursiveCharacterSplitter
 
 TEXT = """
@@ -11,6 +10,7 @@ He was looking for a place to stay.
 
 The innkeeper told him the inn was full.
 """
+
 
 def test_recursive_basic_splitting():
     """Tests basic recursive splitting with default separators."""
@@ -28,7 +28,7 @@ def test_recursive_custom_separators():
         separators=[r"Chapter \d+:"],
         keep_separator=False,
         chunk_size=150,
-        chunk_overlap=0
+        chunk_overlap=0,
     )
     chunks = splitter.split_text(TEXT)
 
@@ -54,9 +54,7 @@ def test_recursive_length_function():
 
     # chunk_size is 12 tokens, so it should fit 2 words (10 tokens)
     splitter = RecursiveCharacterSplitter(
-        chunk_size=12,
-        chunk_overlap=0,
-        length_function=lambda x: len(x.split()) * 5
+        chunk_size=12, chunk_overlap=0, length_function=lambda x: len(x.split()) * 5
     )
     chunks = splitter.split_text(text)
 
