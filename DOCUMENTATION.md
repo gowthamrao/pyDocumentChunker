@@ -1,6 +1,6 @@
-# Advanced Text Segmentation Package: Technical Documentation
+# pyDocumentChunker Package: Technical Documentation
 
-This document provides a detailed technical documentation of the Advanced Text Segmentation package, mapping its features and implementation directly to the Functional Requirements Document (FRD).
+This document provides a detailed technical documentation of the pyDocumentChunker package, mapping its features and implementation directly to the Functional Requirements Document (FRD).
 
 ## 1.0 Introduction and Scope
 
@@ -8,7 +8,7 @@ This section outlines the high-level purpose, objectives, and design principles 
 
 ### 1.1 Purpose (FRD 1.1)
 
-The **Advanced Text Segmentation** package is a specialized Python library designed to be a foundational component in modern Natural Language Processing (NLP) and Retrieval-Augmented Generation (RAG) systems. Its primary purpose is to ingest large, unstructured, or semi-structured documents and intelligently divide them into smaller, more manageable segments, or "chunks."
+The **pyDocumentChunker** package is a specialized Python library designed to be a foundational component in modern Natural Language Processing (NLP) and Retrieval-Augmented Generation (RAG) systems. Its primary purpose is to ingest large, unstructured, or semi-structured documents and intelligently divide them into smaller, more manageable segments, or "chunks."
 
 ### 1.2 Objectives (FRD 1.2)
 
@@ -18,13 +18,13 @@ The core objective is to transform documents into optimally sized chunks that ar
 
 The package's architecture is built upon five core principles, which are reflected throughout the codebase.
 
-*   **Hyper-Parameterization**: Every chunking strategy is highly configurable. The base `TextSplitter` class (`src/text_segmentation/base.py`) establishes a common set of parameters (`chunk_size`, `chunk_overlap`, `minimum_chunk_size`, etc.) with sensible defaults, allowing users to fine-tune the chunking process to their specific needs.
+*   **Hyper-Parameterization**: Every chunking strategy is highly configurable. The base `TextSplitter` class (`src/pyDocumentChunker/base.py`) establishes a common set of parameters (`chunk_size`, `chunk_overlap`, `minimum_chunk_size`, etc.) with sensible defaults, allowing users to fine-tune the chunking process to their specific needs.
 
 *   **Modularity and Extensibility**: The architecture is fundamentally modular. It is built around a central abstract base class, `TextSplitter`, which defines a common interface for all strategies. Each chunking strategy (e.g., `RecursiveCharacterSplitter`, `MarkdownSplitter`) is implemented as a separate, self-contained class, making it easy to extend the package with new, custom strategies.
 
-*   **Tokenization Awareness**: The package is designed to be fully aware of token-based length calculations, which are critical for LLM applications. The `length_function` parameter in all splitters allows users to plug in any tokenizer function (e.g., `tiktoken` for OpenAI models, or a Hugging Face tokenizer). The `src/text_segmentation/tokenizers.py` module provides helpers for this purpose. This directly fulfills the requirement for the package to accurately measure chunk size using pluggable tokenization methods.
+*   **Tokenization Awareness**: The package is designed to be fully aware of token-based length calculations, which are critical for LLM applications. The `length_function` parameter in all splitters allows users to plug in any tokenizer function (e.g., `tiktoken` for OpenAI models, or a Hugging Face tokenizer). The `src/pyDocumentChunker/tokenizers.py` module provides helpers for this purpose. This directly fulfills the requirement for the package to accurately measure chunk size using pluggable tokenization methods.
 
-*   **Ecosystem Compatibility**: The package ensures seamless integration with the most popular NLP and RAG frameworks. The `src/text_segmentation/integrations/` directory contains dedicated wrapper classes:
+*   **Ecosystem Compatibility**: The package ensures seamless integration with the most popular NLP and RAG frameworks. The `src/pyDocumentChunker/integrations/` directory contains dedicated wrapper classes:
     *   `LangChainWrapper` inherits from LangChain's `TextSplitter`, allowing any splitter from this package to be used in a LangChain pipeline.
     *   `LlamaIndexWrapper` inherits from LlamaIndex's `NodeParser`, providing the same drop-in compatibility for the LlamaIndex ecosystem.
 
@@ -32,7 +32,7 @@ The package's architecture is built upon five core principles, which are reflect
 
 ## 2.0 Input Handling and Preprocessing
 
-This section details how the package ingests and preprocesses text before segmentation, corresponding to Section 2.0 of the FRD. These features are primarily implemented in the base `TextSplitter` class (`src/text_segmentation/base.py`).
+This section details how the package ingests and preprocesses text before segmentation, corresponding to Section 2.0 of the FRD. These features are primarily implemented in the base `TextSplitter` class (`src/pyDocumentChunker/base.py`).
 
 ### 2.1 Data Ingestion
 
@@ -65,12 +65,12 @@ This section provides a detailed description of each chunking strategy implement
 ### 3.1 Fixed-Size Chunking (R-3.1)
 
 *   **Concept**: This is the most basic approach to chunking. It splits the text into segments of a predetermined maximum size, with a defined overlap between them. It does not consider any semantic or structural boundaries.
-*   **Implementation**: `text_segmentation.strategies.fixed_size.FixedSizeSplitter`
+*   **Implementation**: `pyDocumentChunker.strategies.fixed_size.FixedSizeSplitter`
 *   **How it Works**: This class is cleverly implemented as a subclass of `RecursiveCharacterSplitter`. It forces the recursive splitter to use an empty string (`""`) as its only separator. This has the effect of splitting the text into individual characters, which are then merged back together into chunks that strictly adhere to the `chunk_size`, as measured by the `length_function`. This ensures that even with complex tokenizers, the chunk size limit is never violated.
 
 **Code Example:**
 ```python
-from text_segmentation.strategies.fixed_size import FixedSizeSplitter
+from pyDocumentChunker import FixedSizeSplitter
 
 text = "This is a simple text that will be split into fixed-size chunks."
 splitter = FixedSizeSplitter(chunk_size=20, chunk_overlap=5)
@@ -83,14 +83,14 @@ chunks = splitter.split_text(text)
 ### 3.2 Recursive Character Splitting (R-3.2)
 
 *   **Concept**: This is a highly versatile and commonly used strategy. It attempts to split text based on a prioritized, ordered list of separators. It starts with the highest-priority separator (e.g., double newlines for paragraphs) and recursively moves to lower-priority separators (e.g., newlines, periods, spaces) until the resulting segments are smaller than the `chunk_size`.
-*   **Implementation**: `text_segmentation.strategies.recursive.RecursiveCharacterSplitter`
+*   **Implementation**: `pyDocumentChunker.strategies.recursive.RecursiveCharacterSplitter`
 *   **How it Works**: The implementation uses a robust two-stage "split-then-merge" algorithm.
     1.  **Split**: The `_recursive_split` method breaks the text down into the smallest possible fragments based on the separators, crucially preserving the `start_index` of each fragment relative to the original document.
     2.  **Merge**: The main `split_text` method then intelligently merges these fragments back together, creating chunks that respect the `chunk_size` and calculating the correct `chunk_overlap`. If a segment remains too large after all separators have been tried, it performs a hard character split as a fallback (R-3.2.4).
 
 **Code Example:**
 ```python
-from text_segmentation.strategies.recursive import RecursiveCharacterSplitter
+from pyDocumentChunker import RecursiveCharacterSplitter
 
 text = "First paragraph.\n\nSecond paragraph. It has two sentences.\nThird paragraph."
 # Default separators are ["\n\n", "\n", ". ", " ", ""]
@@ -105,13 +105,13 @@ chunks = splitter.split_text(text)
 
 *   **Concept**: This strategy splits a document based on sentence boundaries, aiming to keep whole sentences intact within chunks. It then aggregates these sentences into chunks that do not exceed the `chunk_size`. This is ideal for prose and text where grammatical completeness is important.
 *   **Implementation**:
-    *   `text_segmentation.strategies.sentence.SentenceSplitter` (uses NLTK)
-    *   `text_segmentation.strategies.spacy_sentence.SpacySentenceSplitter` (uses spaCy for potentially higher accuracy)
+    *   `pyDocumentChunker.strategies.sentence.SentenceSplitter` (uses NLTK)
+    *   `pyDocumentChunker.strategies.spacy_sentence.SpacySentenceSplitter` (uses spaCy for potentially higher accuracy)
 *   **How it Works**: The splitter first uses an NLP library (NLTK or spaCy) to perform Sentence Boundary Detection (SBD), identifying the exact start and end character indices of each sentence. It then groups these sentences into a chunk until adding the next sentence would exceed `chunk_size`. Overlap is controlled by `overlap_sentences`, which specifies how many sentences from the end of one chunk should be repeated at the beginning of the next (R-3.3.3). If a single sentence is longer than `chunk_size`, it is broken down further using a fallback `RecursiveCharacterSplitter`.
 
 **Code Example (NLTK):**
 ```python
-from text_segmentation.strategies.sentence import SentenceSplitter
+from pyDocumentChunker import SentenceSplitter
 
 # Requires: pip install .[nlp]
 # And: python -c "import nltk; nltk.download('punkt')"
@@ -127,8 +127,8 @@ chunks = splitter.split_text(text)
 
 *   **Concept**: This strategy leverages the explicit structure of semi-structured documents like Markdown and HTML to create highly logical chunks. It prioritizes splitting at major structural boundaries (e.g., between sections marked by headers) rather than just at a certain size.
 *   **Implementation**:
-    *   `text_segmentation.strategies.structure.markdown.MarkdownSplitter`
-    *   `text_segmentation.strategies.structure.html.HTMLSplitter`
+    *   `pyDocumentChunker.strategies.structure.markdown.MarkdownSplitter`
+    *   `pyDocumentChunker.strategies.structure.html.HTMLSplitter`
 *   **How it Works**: The `MarkdownSplitter` uses a sophisticated multi-pass algorithm:
     1.  **Parse & Extract**: It uses `markdown-it-py` to parse the document into a syntax tree. It traverses the tree to extract a flat list of "blocks" (headings, paragraphs, lists, etc.), attaching the current header hierarchy (e.g., `{'H1': 'Title', 'H2': 'Section'}`) to each block as `hierarchical_context` metadata (R-3.4.4).
     2.  **Group**: It iterates through the blocks and groups them into chunks, splitting primarily when a major header boundary is crossed (R-3.4.3) or when the block type changes.
@@ -136,7 +136,7 @@ chunks = splitter.split_text(text)
 
 **Code Example (Markdown):**
 ```python
-from text_segmentation.strategies.structure.markdown import MarkdownSplitter
+from pyDocumentChunker import MarkdownSplitter
 
 # Requires: pip install .[markdown]
 markdown_text = "# Title\n\nThis is a paragraph.\n\n## Section 1\n\nThis content is under section 1."
@@ -153,7 +153,7 @@ chunks = splitter.split_text(markdown_text)
 ### 3.5 Semantic Chunking (R-3.5)
 
 *   **Concept**: This is an advanced strategy that splits text based on semantic meaning rather than fixed rules. It identifies points in the text where the topic or context appears to shift, creating chunks that are topically coherent.
-*   **Implementation**: `text_segmentation.strategies.semantic.SemanticSplitter`
+*   **Implementation**: `pyDocumentChunker.strategies.semantic.SemanticSplitter`
 *   **How it Works**: The process involves several steps:
     1.  **Pluggable Embeddings (R-3.5.1)**: The user MUST provide an `embedding_function` that can convert text into numerical vectors (embeddings).
     2.  **Sentence Splitting**: The text is first divided into individual sentences.
@@ -166,7 +166,7 @@ chunks = splitter.split_text(markdown_text)
 
 **Code Example:**
 ```python
-from text_segmentation.strategies.semantic import SemanticSplitter
+from pyDocumentChunker import SemanticSplitter
 # Requires: pip install .[semantic]
 # Assume 'my_embedding_function' is a function you provide, e.g., from sentence-transformers.
 # def my_embedding_function(texts: list[str]) -> list[list[float]]: ...
@@ -186,7 +186,7 @@ chunks = splitter.split_text(text)
 ### 3.6 Specialized Chunking (Code) (R-3.6)
 
 *   **Concept**: This strategy is specifically designed for source code. It uses a proper code parser (`tree-sitter`) to split code along syntactic boundaries, such as functions, classes, or methods. This ensures that chunks are syntactically complete and logically self-contained.
-*   **Implementation**: `text_segmentation.strategies.code.CodeSplitter`
+*   **Implementation**: `pyDocumentChunker.strategies.code.CodeSplitter`
 *   **How it Works**: The splitter uses the `tree-sitter` library to parse the source code into a Concrete Syntax Tree (CST).
     1.  **Language Support (R-3.6.1, R-3.6.2)**: The user specifies the `language` (e.g., `'python'`), and the splitter loads the appropriate grammar.
     2.  **Hierarchical Splitting (R-3.6.3)**: It traverses the syntax tree to find the highest-level "chunkable" nodes (defined per-language in `LANGUAGE_QUERIES`). For example, it will identify an entire class definition rather than the individual methods inside it. This ensures that the logical structure of the code is preserved.
@@ -194,7 +194,7 @@ chunks = splitter.split_text(text)
 
 **Code Example (Python):**
 ```python
-from text_segmentation.strategies.code import CodeSplitter
+from pyDocumentChunker import CodeSplitter
 
 # Requires: pip install .[code]
 python_code = "class MyClass:\n    def method_one(self):\n        pass\n\ndef my_function():\n    return True"
@@ -207,7 +207,7 @@ chunks = splitter.split_text(python_code)
 
 ## 4.0 Configuration and Optimization
 
-This section details the core configuration and optimization parameters available for all text splitters, corresponding to Section 4.0 of the FRD. These parameters are part of the base `TextSplitter` class (`src/text_segmentation/base.py`) and can be passed to the constructor of any splitter.
+This section details the core configuration and optimization parameters available for all text splitters, corresponding to Section 4.0 of the FRD. These parameters are part of the base `TextSplitter` class (`src/pyDocumentChunker/base.py`) and can be passed to the constructor of any splitter.
 
 ### 4.1 Core Parameters
 
@@ -221,8 +221,8 @@ These are the fundamental parameters that control the chunking process.
 
 **Example: Token-Aware Chunking with `tiktoken`**
 ```python
-from text_segmentation.strategies.recursive import RecursiveCharacterSplitter
-from text_segmentation.tokenizers import from_tiktoken
+from pyDocumentChunker import RecursiveCharacterSplitter
+from pyDocumentChunker.tokenizers import from_tiktoken
 
 # Requires: pip install .[tokenizers]
 text = "A long document about Large Language Models and their token limits."
@@ -259,7 +259,7 @@ This section details the standardized output format of all splitting operations,
 
 ### 5.1 Output Structure
 
-*   **R-5.1.1 (Standardized Object)**: The output of any `splitter.split_text()` operation is a list of `Chunk` objects (`List[Chunk]`). The `Chunk` is a dedicated data class defined in `src/text_segmentation/core.py` that holds both the content and all associated metadata.
+*   **R-5.1.1 (Standardized Object)**: The output of any `splitter.split_text()` operation is a list of `Chunk` objects (`List[Chunk]`). The `Chunk` is a dedicated data class defined in `src/pyDocumentChunker/core.py` that holds both the content and all associated metadata.
 
 *   **R-5.1.2 (Framework Compatibility)**: When a splitter is used via one of the integration classes (see Section 6.2), the `Chunk` objects are automatically and losslessly converted into the appropriate schema for that framework:
     *   **LangChain**: `Chunk` is converted to a `langchain_core.documents.Document`. The `content` becomes `page_content`, and all other chunk attributes are placed in the `metadata` dictionary.
@@ -297,13 +297,13 @@ This final section describes the package's high-level software architecture, its
 
 ### 6.1 Architecture and Extensibility
 
-*   **R-6.1.1 (Modular Architecture)**: The package is built on a modular and extensible foundation. The core of this design is the `TextSplitter` abstract base class (ABC) located in `src/text_segmentation/base.py`. This ABC defines a common interface (the `split_text` method) and a shared set of configuration parameters that all concrete chunking strategies must adhere to. This ensures consistency and allows for any splitter to be used interchangeably.
+*   **R-6.1.1 (Modular Architecture)**: The package is built on a modular and extensible foundation. The core of this design is the `TextSplitter` abstract base class (ABC) located in `src/pyDocumentChunker/base.py`. This ABC defines a common interface (the `split_text` method) and a shared set of configuration parameters that all concrete chunking strategies must adhere to. This ensures consistency and allows for any splitter to be used interchangeably.
 
 *   **R-6.1.2 (Framework-Agnostic Core)**: The core implementation of every chunking strategy is framework-agnostic. The strategies operate on standard Python strings and produce a `List[Chunk]`, without any knowledge of LangChain or LlamaIndex. This clean separation of concerns makes the core logic highly portable, stable, and easy to test in isolation.
 
 ### 6.2 Framework Integrations
 
-The package provides dedicated, high-quality wrapper classes to ensure seamless, drop-in compatibility with major RAG frameworks. These are located in the `src/text_segmentation/integrations/` directory.
+The package provides dedicated, high-quality wrapper classes to ensure seamless, drop-in compatibility with major RAG frameworks. These are located in the `src/pyDocumentChunker/integrations/` directory.
 
 *   **R-6.2.1 (LangChain Compatibility)**: The `LangChainWrapper` class (`integrations/langchain.py`) serves as an adapter to the LangChain ecosystem.
     *   It inherits from `langchain_core.text_splitter.TextSplitter`.

@@ -1,5 +1,5 @@
 import pytest
-from text_segmentation.strategies.structure.markdown import MarkdownSplitter
+from pyDocumentChunker import MarkdownSplitter
 from unittest.mock import patch
 
 # FRD Requirement Being Tested:
@@ -99,7 +99,7 @@ def test_import_error_if_markdown_it_not_installed():
     """
     Tests that an ImportError is raised if markdown-it-py is not installed.
     """
-    with patch("text_segmentation.strategies.structure.markdown.MarkdownIt", None):
+    with patch("pyDocumentChunker.strategies.structure.markdown.MarkdownIt", None):
         with pytest.raises(ImportError):
             MarkdownSplitter()
 
@@ -116,7 +116,7 @@ def test_private_methods():
     line_indices = splitter._get_line_start_indices(text)
 
     # Mock SyntaxTreeNode
-    node = patch("text_segmentation.strategies.structure.markdown.SyntaxTreeNode").start()
+    node = patch("pyDocumentChunker.strategies.structure.markdown.SyntaxTreeNode").start()
     node.map = (0, 2)
     node.children = []
 

@@ -1,8 +1,8 @@
 import pytest
 from unittest.mock import MagicMock, patch
-from text_segmentation.integrations.langchain import LangChainWrapper, Document
-from text_segmentation.base import TextSplitter
-from text_segmentation.core import Chunk
+from pyDocumentChunker.integrations.langchain import LangChainWrapper, Document
+from pyDocumentChunker.base import TextSplitter
+from pyDocumentChunker.core import Chunk
 
 # Mock TextSplitter for testing
 class MockTextSplitter(TextSplitter):
@@ -28,7 +28,7 @@ def test_langchain_wrapper_init(mock_splitter):
     wrapper = LangChainWrapper(mock_splitter)
     assert wrapper.splitter is mock_splitter
 
-@patch("text_segmentation.integrations.langchain.Document")
+@patch("pyDocumentChunker.integrations.langchain.Document")
 def test_chunk_to_document(mock_document, mock_splitter):
     """Tests the conversion of a Chunk to a LangChain Document."""
     chunk = Chunk(
@@ -56,7 +56,7 @@ def test_split_text(mock_splitter):
     result = wrapper.split_text(text)
     assert result == ["this is", "a test"]
 
-@patch("text_segmentation.integrations.langchain.Document")
+@patch("pyDocumentChunker.integrations.langchain.Document")
 def test_create_documents(mock_document, mock_splitter):
     """Tests the creation of documents from texts."""
     wrapper = LangChainWrapper(mock_splitter)
@@ -66,7 +66,7 @@ def test_create_documents(mock_document, mock_splitter):
 
     assert mock_document.call_count == 3
 
-@patch("text_segmentation.integrations.langchain.Document")
+@patch("pyDocumentChunker.integrations.langchain.Document")
 def test_create_documents_with_metadata(mock_document, mock_splitter):
     """Tests creating documents with metadata."""
     wrapper = LangChainWrapper(mock_splitter)
@@ -78,7 +78,7 @@ def test_create_documents_with_metadata(mock_document, mock_splitter):
     assert mock_document.call_count == 2
     assert mock_document.call_args_list[0][1]["metadata"]["source"] == "doc1"
 
-@patch("text_segmentation.integrations.langchain.Document")
+@patch("pyDocumentChunker.integrations.langchain.Document")
 def test_split_documents(mock_document, mock_splitter):
     """Tests splitting a list of LangChain Documents."""
     wrapper = LangChainWrapper(mock_splitter)
@@ -98,7 +98,7 @@ def test_import_error(mock_splitter):
     """
     Tests that an ImportError is raised if langchain-core is not installed.
     """
-    with patch("text_segmentation.integrations.langchain.LangChainTextSplitter", object):
+    with patch("pyDocumentChunker.integrations.langchain.LangChainTextSplitter", object):
         wrapper = LangChainWrapper(mock_splitter)
         with pytest.raises(ImportError):
             wrapper.split_documents([])

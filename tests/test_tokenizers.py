@@ -1,8 +1,8 @@
 import pytest
 from unittest.mock import patch
 
-from text_segmentation.strategies.recursive import RecursiveCharacterSplitter
-from text_segmentation.tokenizers import from_tiktoken
+from pyDocumentChunker import RecursiveCharacterSplitter
+from pyDocumentChunker.tokenizers import from_tiktoken
 
 
 def test_recursive_splitter_with_tiktoken():
@@ -65,7 +65,7 @@ def test_from_tiktoken_caching():
     """
     try:
         # Clear cache for a clean test
-        from text_segmentation import tokenizers
+        from pyDocumentChunker import tokenizers
         tokenizers._tokenizer_cache.clear()
 
         func1 = from_tiktoken("cl100k_base")
@@ -78,7 +78,7 @@ def test_from_tiktoken_caching():
 
 def test_from_tiktoken_import_error():
     """Tests that an ImportError is raised if tiktoken is not installed."""
-    from text_segmentation import tokenizers
+    from pyDocumentChunker import tokenizers
     tokenizers._tokenizer_cache.clear()
 
     with patch.dict("sys.modules", {"tiktoken": None}):

@@ -1,5 +1,5 @@
 import pytest
-from text_segmentation.strategies.fixed_size import FixedSizeSplitter
+from pyDocumentChunker import FixedSizeSplitter
 
 
 class TestFixedSizeSplitter:

@@ -10,7 +10,7 @@ except OSError:
     pytest.skip("Spacy model 'en_core_web_sm' not found, skipping tests.", allow_module_level=True)
 
 
-from text_segmentation.strategies.spacy_sentence import SpacySentenceSplitter
+from pyDocumentChunker import SpacySentenceSplitter
 
 # A sample text for testing, with multiple sentences of varying length.
 SAMPLE_TEXT = (
@@ -158,7 +158,7 @@ def test_import_error_if_spacy_not_installed(monkeypatch):
 
     monkeypatch.setitem(sys.modules, "spacy", None)
 
-    from text_segmentation.strategies import spacy_sentence
+    from pyDocumentChunker.strategies import spacy_sentence
 
     # Reloading the module should now set NLP to None
     importlib.reload(spacy_sentence)
@@ -171,7 +171,7 @@ def test_import_error_if_spacy_not_installed(monkeypatch):
 def test_model_not_found_error(monkeypatch):
     """Tests an informative error is raised if the model is not downloaded."""
     import importlib
-    from text_segmentation.strategies import spacy_sentence
+    from pyDocumentChunker.strategies import spacy_sentence
 
     def mock_load_error(model_name):
         raise OSError(f"Can't find model '{model_name}'.")
