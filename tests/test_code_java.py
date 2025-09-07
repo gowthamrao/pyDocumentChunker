@@ -1,5 +1,5 @@
 import pytest
-from text_segmentation.strategies.code import CodeSplitter
+from pyDocumentChunker import CodeSplitter
 
 # A comprehensive Java code sample to test various top-level declarations.
 SAMPLE_JAVA_CODE = """

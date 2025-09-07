@@ -1,6 +1,6 @@
 import pytest
-from text_segmentation.strategies.fixed_size import FixedSizeSplitter
-from text_segmentation.core import Chunk
+from pyDocumentChunker import FixedSizeSplitter
+from pyDocumentChunker import Chunk
 
 class TestBaseFunctionality:
     def setup_method(self):

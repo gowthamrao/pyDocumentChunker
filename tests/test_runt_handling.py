@@ -1,8 +1,8 @@
 import pytest
 import copy
 from typing import List, Optional
-from text_segmentation.base import TextSplitter
-from text_segmentation.core import Chunk
+from pyDocumentChunker.base import TextSplitter
+from pyDocumentChunker.core import Chunk
 
 # ==========================================
 # Test Setup

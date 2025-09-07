@@ -1,5 +1,5 @@
 import pytest
-from text_segmentation.strategies.recursive import RecursiveCharacterSplitter
+from pyDocumentChunker import RecursiveCharacterSplitter
 
 def test_recursive_splitter_with_variable_width_regex_separator():
     """

@@ -1,5 +1,5 @@
 import pytest
-from text_segmentation.strategies.structure.markdown import MarkdownSplitter
+from pyDocumentChunker import MarkdownSplitter
 from unittest.mock import patch
 
 # FRD Requirement Being Tested:

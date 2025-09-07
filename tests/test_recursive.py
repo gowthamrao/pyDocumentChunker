@@ -1,5 +1,5 @@
 import pytest
-from text_segmentation.strategies.recursive import RecursiveCharacterSplitter
+from pyDocumentChunker import RecursiveCharacterSplitter
 
 TEXT = """
 Title: The Great Adventure

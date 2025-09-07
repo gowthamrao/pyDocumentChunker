@@ -1,4 +1,4 @@
-# Advanced Text Segmentation
+# pyDocumentChunker
 
 This repository contains a state-of-the-art, open-source Python package for advanced text segmentation (chunking). It is designed to be a critical component in Retrieval-Augmented Generation (RAG) systems and advanced Natural Language Processing (NLP) data pipelines.
 
@@ -62,7 +62,7 @@ All splitter classes inherit from a common `TextSplitter` base class and share a
 The simplest way to get started is with the `RecursiveCharacterSplitter`. All splitters return a list of `Chunk` objects, which are enriched with comprehensive metadata as required by the FRD.
 
 ```python
-from text_segmentation.strategies.recursive import RecursiveCharacterSplitter
+from pyDocumentChunker import RecursiveCharacterSplitter
 
 text = "This is a long document.   It has multiple sentences and paragraphs.\n\nWe want to split it into smaller chunks. Some chunks are small."
 
@@ -109,7 +109,7 @@ Example output of `first_chunk.to_dict()`:
 The most basic strategy. Splits text into chunks of a fixed character size.
 
 ```python
-from text_segmentation.strategies.fixed_size import FixedSizeSplitter
+from pyDocumentChunker import FixedSizeSplitter
 splitter = FixedSizeSplitter(chunk_size=100, chunk_overlap=20)
 chunks = splitter.split_text(my_text)
 ```
@@ -118,7 +118,7 @@ chunks = splitter.split_text(my_text)
 Recursively splits text based on a prioritized list of separators (e.g., `["\n\n", "\n", ". ", " "]`). This is often the recommended starting point.
 
 ```python
-from text_segmentation.strategies.recursive import RecursiveCharacterSplitter
+from pyDocumentChunker import RecursiveCharacterSplitter
 splitter = RecursiveCharacterSplitter(chunk_size=1024, chunk_overlap=200)
 chunks = splitter.split_text(my_text)
 ```
@@ -127,7 +127,7 @@ chunks = splitter.split_text(my_text)
 Splits text based on sentence boundaries using NLTK, then aggregates sentences into chunks. Requires the `[nlp]` extra.
 
 ```python
-from text_segmentation.strategies import SentenceSplitter
+from pyDocumentChunker import SentenceSplitter
 # Ensure you have run: python -c "import nltk; nltk.download('punkt')"
 splitter = SentenceSplitter(chunk_size=1024, overlap_sentences=1)
 chunks = splitter.split_text(my_prose_text)
@@ -137,7 +137,7 @@ chunks = splitter.split_text(my_prose_text)
 A more advanced sentence splitter that uses `spacy` for higher accuracy sentence boundary detection. It functions similarly to the NLTK-based splitter but often provides better results for complex texts. Requires the `[spacy]` extra.
 
 ```python
-from text_segmentation.strategies import SpacySentenceSplitter
+from pyDocumentChunker import SpacySentenceSplitter
 # Ensure you have run: pip install .[spacy]
 # And downloaded the model: python -m spacy download en_core_web_sm
 splitter = SpacySentenceSplitter(chunk_size=1024, overlap_sentences=1)
@@ -148,7 +148,7 @@ chunks = splitter.split_text(my_prose_text)
 A structure-aware splitter that uses Markdown headers (H1-H6), paragraphs, and other elements as boundaries. Requires the `[markdown]` extra.
 
 ```python
-from text_segmentation.strategies.structure.markdown import MarkdownSplitter
+from pyDocumentChunker import MarkdownSplitter
 splitter = MarkdownSplitter(chunk_size=1024, chunk_overlap=0)
 chunks = splitter.split_text(my_markdown_text)
 # Chunks will have `hierarchical_context` metadata populated.
@@ -160,7 +160,7 @@ print(chunks[0].hierarchical_context)
 A structure-aware splitter for HTML documents. Requires the `[html]` extra.
 
 ```python
-from text_segmentation.strategies.structure.html import HTMLSplitter
+from pyDocumentChunker import HTMLSplitter
 splitter = HTMLSplitter(chunk_size=1024, chunk_overlap=0)
 chunks = splitter.split_text(my_html_text)
 ```
@@ -174,7 +174,7 @@ The `breakpoint_method` and `breakpoint_threshold` parameters control how a brea
 - `breakpoint_method='absolute'`: A split occurs if the similarity is below a fixed value. `breakpoint_threshold` is the similarity value (e.g., `0.85`).
 
 ```python
-from text_segmentation.strategies.semantic import SemanticSplitter
+from pyDocumentChunker import SemanticSplitter
 # You must provide your own embedding function.
 # e.g., from sentence_transformers import SentenceTransformer
 # model = SentenceTransformer('all-MiniLM-L6-v2')
@@ -196,7 +196,7 @@ chunks = splitter.split_text(my_text)
 A syntax-aware splitter for source code. Requires the `[code]` extra.
 
 ```python
-from text_segmentation.strategies.code import CodeSplitter
+from pyDocumentChunker import CodeSplitter
 splitter = CodeSplitter(language="python", chunk_size=1024, chunk_overlap=0)
 chunks = splitter.split_text(my_python_code)
 ```
@@ -216,8 +216,8 @@ pip install .[tokenizers]
 Then, you can create a token-based length function and pass it to any splitter.
 
 ```python
-from text_segmentation.strategies.recursive import RecursiveCharacterSplitter
-from text_segmentation.tokenizers import from_tiktoken
+from pyDocumentChunker import RecursiveCharacterSplitter
+from pyDocumentChunker.tokenizers import from_tiktoken
 
 # A long text about the history of AI...
 text = "Artificial intelligence (AI) is intelligence demonstrated by machines, as opposed to the natural intelligence displayed by humans and other animals. AI research has been defined as the field of study of intelligent agents, which refers to any system that perceives its environment and takes actions that maximize its chance of successfully achieving its goals."
@@ -247,8 +247,8 @@ for i, chunk in enumerate(chunks):
 ### LangChain
 Use any splitter in a LangChain pipeline. Requires the `[langchain]` extra.
 ```python
-from text_segmentation.strategies.recursive import RecursiveCharacterSplitter
-from text_segmentation.integrations.langchain import LangChainWrapper
+from pyDocumentChunker import RecursiveCharacterSplitter
+from pyDocumentChunker.integrations.langchain import LangChainWrapper
 
 # 1. Create a splitter instance from this package
 ats_splitter = RecursiveCharacterSplitter(chunk_size=100, chunk_overlap=10)
@@ -266,8 +266,8 @@ print(split_docs[0].metadata)
 ### LlamaIndex
 Use any splitter as a LlamaIndex `NodeParser`. Requires the `[llamaindex]` extra.
 ```python
-from text_segmentation.strategies.sentence import SentenceSplitter
-from text_segmentation.integrations.llamaindex import LlamaIndexWrapper
+from pyDocumentChunker import SentenceSplitter
+from pyDocumentChunker.integrations.llamaindex import LlamaIndexWrapper
 
 # 1. Create a splitter instance
 ats_splitter = SentenceSplitter(chunk_size=512, overlap_sentences=1)

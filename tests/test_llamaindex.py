@@ -1,8 +1,8 @@
 import pytest
 from unittest.mock import MagicMock, patch
-from text_segmentation.integrations.llamaindex import LlamaIndexWrapper
-from text_segmentation.base import TextSplitter
-from text_segmentation.core import Chunk
+from pyDocumentChunker.integrations.llamaindex import LlamaIndexWrapper
+from pyDocumentChunker.base import TextSplitter
+from pyDocumentChunker.core import Chunk
 
 # Mock LlamaIndex classes if not installed
 try:
@@ -60,7 +60,7 @@ def test_from_defaults(mock_splitter):
     assert isinstance(wrapper, LlamaIndexWrapper)
     assert wrapper.splitter is mock_splitter
 
-@patch("text_segmentation.integrations.llamaindex.TextNode")
+@patch("pyDocumentChunker.integrations.llamaindex.TextNode")
 def test_chunk_to_node(mock_text_node, mock_splitter):
     """Tests conversion of a Chunk to a TextNode."""
     chunk = Chunk(content="Hello world", start_index=0, end_index=11, sequence_number=0)
@@ -76,7 +76,7 @@ def test_chunk_to_node(mock_text_node, mock_splitter):
     mock_text_node.assert_called_once()
     assert mock_text_node.call_args[1]["text"] == "Hello world"
 
-@patch("text_segmentation.integrations.llamaindex.TextNode")
+@patch("pyDocumentChunker.integrations.llamaindex.TextNode")
 def test_parse_nodes(mock_text_node, mock_splitter):
     """Tests parsing a sequence of nodes."""
     nodes = [MagicMock(spec=BaseNode)]
@@ -100,7 +100,7 @@ def test_import_error(mock_splitter):
     """
     Tests that an ImportError is raised if llama-index-core is not installed.
     """
-    with patch("text_segmentation.integrations.llamaindex.NodeParser", object):
+    with patch("pyDocumentChunker.integrations.llamaindex.NodeParser", object):
         wrapper = LlamaIndexWrapper(mock_splitter)
         wrapper.callback_manager = MagicMock()
         with pytest.raises(ImportError):

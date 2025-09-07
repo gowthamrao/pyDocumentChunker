@@ -1,5 +1,5 @@
 import pytest
-from text_segmentation.core import Chunk
+from pyDocumentChunker import Chunk
 
 def test_chunk_post_init_validations():
     """

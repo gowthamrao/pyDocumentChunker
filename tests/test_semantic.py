@@ -4,7 +4,7 @@ from typing import List
 # Attempt to import numpy to determine if tests should be skipped.
 try:
     import numpy as np
-    from text_segmentation.strategies.semantic import SemanticSplitter
+    from pyDocumentChunker.strategies.semantic import SemanticSplitter
     NUMPY_AVAILABLE = True
 except ImportError:
     NUMPY_AVAILABLE = False
@@ -160,16 +160,16 @@ def test_dependency_import_error():
 
     try:
         with patch.dict(sys.modules, {"numpy": None}):
-            import text_segmentation.strategies.semantic
-            importlib.reload(text_segmentation.strategies.semantic)
+            import pyDocumentChunker.strategies.semantic
+            importlib.reload(pyDocumentChunker.strategies.semantic)
 
-            from text_segmentation.strategies.semantic import SemanticSplitter
+            from pyDocumentChunker.strategies.semantic import SemanticSplitter
             with pytest.raises(ImportError, match="numpy is not installed"):
                 SemanticSplitter(embedding_function=lambda x: [])
     finally:
         # Restore the module to its original state
-        import text_segmentation.strategies.semantic
-        importlib.reload(text_segmentation.strategies.semantic)
+        import pyDocumentChunker.strategies.semantic
+        importlib.reload(pyDocumentChunker.strategies.semantic)
 
 @pytest.mark.skipif(not NUMPY_AVAILABLE, reason="Numpy is not available")
 def test_fallback_on_last_group():
