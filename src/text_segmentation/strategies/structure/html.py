@@ -66,7 +66,7 @@ class HTMLSplitter(TextSplitter):
         )
 
     def _extract_blocks(
-        self, soup: BeautifulSoup, line_start_indices: List[int]
+        self, soup: BeautifulSoup, text: str, line_start_indices: List[int]
     ) -> List[Tuple[str, int, int, Dict[str, Any]]]:
         """Extracts text blocks from the parsed soup, with metadata."""
         blocks = []
@@ -81,12 +81,9 @@ class HTMLSplitter(TextSplitter):
             if not processed_content:
                 continue
 
-            start_index = 0
-            if hasattr(tag, "sourceline") and tag.sourceline is not None:
-                line = tag.sourceline - 1
-                if line < len(line_start_indices):
-                    # Approximate start position based on line number
-                    start_index = line_start_indices[line]
+            start_index = text.find(str(tag))
+            if start_index == -1:
+                start_index = 0
 
             end_index = start_index + len(raw_text)
 
@@ -141,7 +138,7 @@ class HTMLSplitter(TextSplitter):
         # --- Structure-Aware Splitting (Default) ---
         # Pre-calculate start index of each line for approximate position mapping
         line_start_indices = [0] + [m.end() for m in re.finditer("\n", text)]
-        blocks = self._extract_blocks(soup, line_start_indices)
+        blocks = self._extract_blocks(soup, text, line_start_indices)
 
         chunks: List[Chunk] = []
         current_chunk_blocks: List[Tuple[str, int, int, Dict[str, Any]]] = []

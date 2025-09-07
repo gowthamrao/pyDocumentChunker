@@ -217,11 +217,11 @@ Description-Content-Type: text/markdown
 License-File: LICENSE
 License-File: NOTICE
 Provides-Extra: nlp
-Requires-Dist: nltk>=3.8; extra == "nlp"
+Requires-Dist: nltk>3.8.1; extra == "nlp"
 Provides-Extra: spacy
 Requires-Dist: spacy>=3.7.0; extra == "spacy"
 Provides-Extra: semantic
-Requires-Dist: numpy>=1.26; extra == "semantic"
+Requires-Dist: numpy>=2.0.0; extra == "semantic"
 Provides-Extra: code
 Requires-Dist: tree-sitter>=0.21.0; extra == "code"
 Requires-Dist: tree-sitter-language-pack>=0.3.0; extra == "code"
@@ -230,11 +230,10 @@ Requires-Dist: markdown-it-py>=3.0.0; extra == "markdown"
 Provides-Extra: html
 Requires-Dist: beautifulsoup4>=4.12.3; extra == "html"
 Requires-Dist: lxml>=5.2.0; extra == "html"
-Requires-Dist: html5lib; extra == "html"
 Provides-Extra: langchain
 Requires-Dist: langchain-core; extra == "langchain"
 Provides-Extra: llamaindex
-Requires-Dist: llama-index-core>=0.10.0; extra == "llamaindex"
+Requires-Dist: llama-index-core>=0.12.29; extra == "llamaindex"
 Provides-Extra: tokenizers
 Requires-Dist: tiktoken>=0.7.0; extra == "tokenizers"
 Provides-Extra: dev

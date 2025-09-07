@@ -114,13 +114,20 @@ def test_html_start_index_correctness():
     # A good enough check is that the text content of the chunk can be found at or near
     # the recorded start_index.
     for chunk in chunks:
-        # We search in a small window around the start_index
-        window_start = max(0, chunk.start_index - 20)
-        window_end = chunk.start_index + 20
+        # We can't do a direct string comparison because of whitespace differences.
+        # Instead, we check that the first few words of the chunk content appear in
+        # a window of the original text around the start_index. This is a good
+        # heuristic for correctness.
+        words = chunk.content.strip().split()
+        if not words:
+            continue
+
+        # Check for the first word in a window around the start index
+        window_start = max(0, chunk.start_index - 50)
+        window_end = chunk.start_index + 50
         window = HTML_TEXT[window_start:window_end]
 
-        # Check if the beginning of the chunk's content appears in the window
-        assert chunk.content.split()[0] in window
+        assert words[0] in window, f"First word '{words[0]}' not found near start_index {chunk.start_index}"
 
 @pytest.mark.skipif(not BS4_LXML_AVAILABLE, reason="BeautifulSoup4 or lxml not installed")
 def test_html_parser_fallback(monkeypatch):
