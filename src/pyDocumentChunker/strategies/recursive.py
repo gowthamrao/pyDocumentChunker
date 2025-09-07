@@ -46,7 +46,6 @@ class RecursiveCharacterSplitter(TextSplitter):
         self._separators = separators or ["\n\n", "\n", ". ", " ", ""]
         self._keep_separator = keep_separator
 
-
     def _recursive_split(
         self, text: str, separators: List[str], start_index: int
     ) -> List[Tuple[str, int]]:
@@ -146,11 +145,16 @@ class RecursiveCharacterSplitter(TextSplitter):
                 end_idx = fragment_start_index + len(fragment_text)
                 potential_content = text[start_idx:end_idx]
 
-            if self.length_function(potential_content) > self.chunk_size and current_chunk_fragments:
+            if (
+                self.length_function(potential_content) > self.chunk_size
+                and current_chunk_fragments
+            ):
                 # Finalize the current chunk.
                 # The content is sliced from the original text to preserve separators.
                 start_idx = current_chunk_fragments[0][1]
-                last_fragment_text, last_fragment_start_index = current_chunk_fragments[-1]
+                last_fragment_text, last_fragment_start_index = current_chunk_fragments[
+                    -1
+                ]
                 end_idx = last_fragment_start_index + len(last_fragment_text)
                 content = text[start_idx:end_idx]
 
@@ -171,7 +175,9 @@ class RecursiveCharacterSplitter(TextSplitter):
                 overlap_fragments: List[Tuple[str, int]] = []
 
                 while overlap_fragments_start_idx >= 0:
-                    current_fragment = current_chunk_fragments[overlap_fragments_start_idx]
+                    current_fragment = current_chunk_fragments[
+                        overlap_fragments_start_idx
+                    ]
                     overlap_fragments.insert(0, current_fragment)
 
                     # To measure overlap, we must use the original text, not the joined fragments.

@@ -1,5 +1,7 @@
 from typing import List
+
 from .core import Chunk
+
 
 def _populate_overlap_metadata(chunks: List[Chunk], original_text: str) -> None:
     """
@@ -23,7 +25,9 @@ def _populate_overlap_metadata(chunks: List[Chunk], original_text: str) -> None:
         if next_chunk.start_index < current_chunk.end_index:
             # The overlapping text is the slice from the start of the next chunk
             # to the end of the current chunk.
-            overlap_content = original_text[next_chunk.start_index:current_chunk.end_index]
+            overlap_content = original_text[
+                next_chunk.start_index : current_chunk.end_index
+            ]
 
             if overlap_content:
                 current_chunk.overlap_content_next = overlap_content

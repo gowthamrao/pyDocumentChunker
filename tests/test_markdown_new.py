@@ -1,6 +1,5 @@
 import pytest
 from pyDocumentChunker import MarkdownSplitter
-from unittest.mock import patch
 
 # FRD Requirement Being Tested:
 # R-3.4.2 (extended): The strategy MUST recognize structural hierarchies, including
@@ -16,7 +15,10 @@ This is the first paragraph. It is a distinct semantic unit.
 
 This is the second paragraph, appearing after the list."""
 
-@pytest.mark.skip(reason="This test is designed to fail with the current implementation.")
+
+@pytest.mark.skip(
+    reason="This test is designed to fail with the current implementation."
+)
 def test_does_not_merge_different_block_types():
     """
     This test is designed to FAIL with the current implementation.
@@ -46,7 +48,9 @@ def test_does_not_merge_different_block_types():
     # 2. Everything else
     # Let's assert for 3 to make it fail.
 
-    assert len(chunks) == 3, "Expected to split content into 3 chunks based on block type"
+    assert (
+        len(chunks) == 3
+    ), "Expected to split content into 3 chunks based on block type"
 
     # The following assertions will fail violently, which is the point.
     assert "This is the first paragraph" in chunks[0].content

@@ -7,7 +7,7 @@ try:
     from llama_index.core.bridge.pydantic import Field
     from llama_index.core.callbacks.base import CallbackManager
     from llama_index.core.node_parser.interface import NodeParser
-    from llama_index.core.schema import BaseNode, Document, TextNode
+    from llama_index.core.schema import BaseNode, TextNode
 except ImportError:
     # Allow import even if llama_index is not installed.
     NodeParser = object
@@ -41,16 +41,14 @@ class LlamaIndexWrapper(NodeParser):
             splitter: An instance of a text splitter from this package.
             callback_manager: LlamaIndex callback manager.
         """
-        super().__init__(
-            splitter=splitter, callback_manager=callback_manager, **kwargs
-        )
+        super().__init__(splitter=splitter, callback_manager=callback_manager, **kwargs)
 
     def _ensure_llamaindex_is_installed(self):
         """Checks if llama-index-core is installed and raises an error if not."""
         if NodeParser is object:
             raise ImportError(
                 "llama-index-core is not installed. Please install it via `pip install "
-                "\"pyDocumentChunker[llamaindex]\"` or `pip install llama-index-core`."
+                '"pyDocumentChunker[llamaindex]"` or `pip install llama-index-core`.'
             )
 
     @classmethod
@@ -90,7 +88,9 @@ class LlamaIndexWrapper(NodeParser):
             text = source_node.get_content()
 
             # Use the wrapped splitter to get chunks
-            chunks = self.splitter.split_text(text, source_document_id=source_node.node_id)
+            chunks = self.splitter.split_text(
+                text, source_document_id=source_node.node_id
+            )
 
             for chunk in chunks:
                 new_node = self._chunk_to_node(chunk, source_node)

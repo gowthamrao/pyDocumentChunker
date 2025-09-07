@@ -49,6 +49,7 @@ enum Color {
 }
 """
 
+
 def test_java_code_splitter_respects_top_level_boundaries():
     """
     Tests that the CodeSplitter correctly splits Java code based on high-level
@@ -57,6 +58,7 @@ def test_java_code_splitter_respects_top_level_boundaries():
     # This test requires the 'code' extras to be installed.
     try:
         from tree_sitter_language_pack import get_language
+
         get_language("java")
     except (ImportError, Exception):
         pytest.skip("Java tree-sitter grammar not available. Skipping test.")

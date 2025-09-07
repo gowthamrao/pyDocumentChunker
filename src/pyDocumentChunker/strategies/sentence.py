@@ -1,9 +1,9 @@
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Tuple
 
 from ..base import TextSplitter
 from ..core import Chunk
-from .recursive import RecursiveCharacterSplitter
 from ..utils import _populate_overlap_metadata
+from .recursive import RecursiveCharacterSplitter
 
 try:
     import nltk
@@ -30,7 +30,7 @@ class SentenceSplitter(TextSplitter):
             raise ValueError("Currently, only the 'nltk' backend is supported.")
         if nltk is None:
             raise ImportError(
-                "NLTK is not installed. Please install it via `pip install \"pyDocumentChunker[nlp]\"` "
+                'NLTK is not installed. Please install it via `pip install "pyDocumentChunker[nlp]"` '
                 "or `pip install nltk` to use the SentenceSplitter."
             )
         try:
@@ -61,7 +61,10 @@ class SentenceSplitter(TextSplitter):
             return []
 
         import string
-        tokenizer: PunktSentenceTokenizer = nltk.data.load("tokenizers/punkt/english.pickle")
+
+        tokenizer: PunktSentenceTokenizer = nltk.data.load(
+            "tokenizers/punkt/english.pickle"
+        )
         sentence_spans = list(tokenizer.span_tokenize(text))
 
         all_sentences = [
@@ -86,7 +89,11 @@ class SentenceSplitter(TextSplitter):
                 fallback_chunks = self._fallback_splitter.split_text(sentence_text)
                 for fb_chunk in fallback_chunks:
                     processed_sentences.append(
-                        (fb_chunk.content, start + fb_chunk.start_index, start + fb_chunk.end_index)
+                        (
+                            fb_chunk.content,
+                            start + fb_chunk.start_index,
+                            start + fb_chunk.end_index,
+                        )
                     )
             else:
                 processed_sentences.append((sentence_text, start, end))
@@ -96,9 +103,14 @@ class SentenceSplitter(TextSplitter):
 
         for sent, start, end in processed_sentences:
             # Join the current sentences with a space to check the length
-            potential_content = " ".join(s[0] for s in current_chunk_sents + [(sent, start, end)])
+            potential_content = " ".join(
+                s[0] for s in current_chunk_sents + [(sent, start, end)]
+            )
 
-            if self.length_function(potential_content) > self.chunk_size and current_chunk_sents:
+            if (
+                self.length_function(potential_content) > self.chunk_size
+                and current_chunk_sents
+            ):
                 # Finalize the current chunk
                 final_content = " ".join(s[0] for s in current_chunk_sents)
                 chunks.append(

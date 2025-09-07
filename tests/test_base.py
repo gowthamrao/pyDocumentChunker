@@ -1,6 +1,6 @@
 import pytest
-from pyDocumentChunker import FixedSizeSplitter
-from pyDocumentChunker import Chunk
+from pyDocumentChunker import Chunk, FixedSizeSplitter
+
 
 class TestBaseFunctionality:
     def setup_method(self):
@@ -9,9 +9,7 @@ class TestBaseFunctionality:
     def test_whitespace_normalization(self):
         text = "This   is a    test.\n\nIt has   extra whitespace."
         splitter = FixedSizeSplitter(
-            chunk_size=20,
-            chunk_overlap=5,
-            normalize_whitespace=True
+            chunk_size=20, chunk_overlap=5, normalize_whitespace=True
         )
         chunks = splitter.split_text(text)
 
@@ -21,25 +19,20 @@ class TestBaseFunctionality:
             assert "\n" not in chunk.content
 
         expected_text = "This is a test. It has extra whitespace."
-        reconstructed_text = "".join(c.content for c in chunks)
         assert chunks[0].content in expected_text
 
     def test_unicode_normalization_nfkc(self):
         text = "ﬁne dining"
         splitter = FixedSizeSplitter(
-            chunk_size=20,
-            chunk_overlap=0,
-            unicode_normalize="NFKC"
+            chunk_size=20, chunk_overlap=0, unicode_normalize="NFKC"
         )
         chunks = splitter.split_text(text)
         assert chunks[0].content == "fine dining"
 
     def test_unicode_normalization_nfc(self):
-        text = "cafe\u0301" # café
+        text = "cafe\u0301"  # café
         splitter = FixedSizeSplitter(
-            chunk_size=10,
-            chunk_overlap=0,
-            unicode_normalize="NFC"
+            chunk_size=10, chunk_overlap=0, unicode_normalize="NFC"
         )
         chunks = splitter.split_text(text)
         assert chunks[0].content == "café"
@@ -50,7 +43,7 @@ class TestBaseFunctionality:
             chunk_size=20,
             chunk_overlap=0,
             minimum_chunk_size=10,
-            min_chunk_merge_strategy="discard"
+            min_chunk_merge_strategy="discard",
         )
         # Produces chunks of len 20, 20, 18. Then enforces min size.
         # Chunks before runt handling:
@@ -86,13 +79,15 @@ class TestBaseFunctionality:
             chunk_size=100,
             chunk_overlap=10,
             minimum_chunk_size=3,
-            min_chunk_merge_strategy="merge_with_previous"
+            min_chunk_merge_strategy="merge_with_previous",
         )
 
         # --- Action: Enforce minimum chunk size ---
         # c_runt (len 2) is smaller than min_chunk_size (3), so it merges with c1.
         initial_chunks = [c1, c_runt, c2]
-        merged_chunks = splitter._enforce_minimum_chunk_size(initial_chunks, original_text)
+        merged_chunks = splitter._enforce_minimum_chunk_size(
+            initial_chunks, original_text
+        )
 
         # --- Assertions ---
         assert len(merged_chunks) == 2, "Runt chunk should have been merged"
@@ -122,7 +117,9 @@ class TestBaseFunctionality:
             FixedSizeSplitter(min_chunk_merge_strategy="INVALID", chunk_overlap=0)
 
     def test_min_chunk_size_too_large_raises_error(self):
-        with pytest.raises(ValueError, match="minimum_chunk_size .* must be smaller than"):
+        with pytest.raises(
+            ValueError, match="minimum_chunk_size .* must be smaller than"
+        ):
             FixedSizeSplitter(chunk_size=100, minimum_chunk_size=100, chunk_overlap=0)
 
     def test_strip_control_chars_option(self):
@@ -137,9 +134,7 @@ class TestBaseFunctionality:
         # --- Test Case 1: strip_control_chars is True ---
         # The control characters should be removed.
         splitter_true = FixedSizeSplitter(
-            chunk_size=100,
-            chunk_overlap=0,
-            strip_control_chars=True
+            chunk_size=100, chunk_overlap=0, strip_control_chars=True
         )
         chunks_true = splitter_true.split_text(text_with_control_chars)
         assert chunks_true[0].content == expected_clean_text
@@ -149,7 +144,7 @@ class TestBaseFunctionality:
         splitter_false = FixedSizeSplitter(
             chunk_size=100,
             chunk_overlap=0,
-            strip_control_chars=False # Explicitly set for clarity
+            strip_control_chars=False,  # Explicitly set for clarity
         )
         chunks_false = splitter_false.split_text(text_with_control_chars)
         assert chunks_false[0].content == text_with_control_chars
@@ -160,17 +155,26 @@ class TestBaseFunctionality:
         even if the primary merge direction is not possible.
         """
         # --- Test 'merge_with_next' for a runt at the END ---
-        c_normal_1 = Chunk(content="This is a normal chunk.", start_index=0, end_index=23, sequence_number=0)
-        c_runt_1 = Chunk(content=" Runt.", start_index=23, end_index=29, sequence_number=1)
+        c_normal_1 = Chunk(
+            content="This is a normal chunk.",
+            start_index=0,
+            end_index=23,
+            sequence_number=0,
+        )
+        c_runt_1 = Chunk(
+            content=" Runt.", start_index=23, end_index=29, sequence_number=1
+        )
         text_1 = c_normal_1.content + c_runt_1.content
 
         splitter_next = FixedSizeSplitter(
             chunk_size=100,
             chunk_overlap=0,
-            minimum_chunk_size=10, # Runt is len 6
-            min_chunk_merge_strategy="merge_with_next"
+            minimum_chunk_size=10,  # Runt is len 6
+            min_chunk_merge_strategy="merge_with_next",
         )
-        chunks_next = splitter_next._enforce_minimum_chunk_size([c_normal_1, c_runt_1], text_1)
+        chunks_next = splitter_next._enforce_minimum_chunk_size(
+            [c_normal_1, c_runt_1], text_1
+        )
 
         assert len(chunks_next) == 1, "Runt at the end should have merged with previous"
         assert chunks_next[0].content == "This is a normal chunk. Runt."
@@ -178,19 +182,30 @@ class TestBaseFunctionality:
         assert chunks_next[0].end_index == 29
 
         # --- Test 'merge_with_previous' for a runt at the BEGINNING ---
-        c_runt_2 = Chunk(content="Runt. ", start_index=0, end_index=6, sequence_number=0)
-        c_normal_2 = Chunk(content="This is a normal chunk.", start_index=6, end_index=29, sequence_number=1)
+        c_runt_2 = Chunk(
+            content="Runt. ", start_index=0, end_index=6, sequence_number=0
+        )
+        c_normal_2 = Chunk(
+            content="This is a normal chunk.",
+            start_index=6,
+            end_index=29,
+            sequence_number=1,
+        )
         text_2 = c_runt_2.content + c_normal_2.content
 
         splitter_prev = FixedSizeSplitter(
             chunk_size=100,
             chunk_overlap=0,
-            minimum_chunk_size=10, # Runt is len 6
-            min_chunk_merge_strategy="merge_with_previous"
+            minimum_chunk_size=10,  # Runt is len 6
+            min_chunk_merge_strategy="merge_with_previous",
         )
-        chunks_prev = splitter_prev._enforce_minimum_chunk_size([c_runt_2, c_normal_2], text_2)
+        chunks_prev = splitter_prev._enforce_minimum_chunk_size(
+            [c_runt_2, c_normal_2], text_2
+        )
 
-        assert len(chunks_prev) == 1, "Runt at the beginning should have merged with next"
+        assert (
+            len(chunks_prev) == 1
+        ), "Runt at the beginning should have merged with next"
         assert chunks_prev[0].content == "Runt. This is a normal chunk."
         assert chunks_prev[0].start_index == 0
         assert chunks_prev[0].end_index == 29
@@ -213,8 +228,12 @@ class TestBaseFunctionality:
         assert len(chunks) > 1
 
         # Check boundary conditions
-        assert chunks[0].overlap_content_previous is None, "First chunk should have no previous overlap"
-        assert chunks[-1].overlap_content_next is None, "Last chunk should have no next overlap"
+        assert (
+            chunks[0].overlap_content_previous is None
+        ), "First chunk should have no previous overlap"
+        assert (
+            chunks[-1].overlap_content_next is None
+        ), "Last chunk should have no next overlap"
 
         # Check all the intermediate overlaps
         for i in range(len(chunks) - 1):
@@ -226,7 +245,10 @@ class TestBaseFunctionality:
             assert next_chunk.overlap_content_previous is not None
 
             # The "next" of the current should be the "previous" of the next
-            assert current_chunk.overlap_content_next == next_chunk.overlap_content_previous
+            assert (
+                current_chunk.overlap_content_next
+                == next_chunk.overlap_content_previous
+            )
 
             # For FixedSizeSplitter, the overlap length should be exactly chunk_overlap,
             # except possibly for the very last overlap if the text ends abruptly.

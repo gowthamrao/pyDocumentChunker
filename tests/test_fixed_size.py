@@ -1,4 +1,3 @@
-import pytest
 from pyDocumentChunker import FixedSizeSplitter
 
 
@@ -28,15 +27,17 @@ class TestFixedSizeSplitter:
         This is the key test. It validates that the overhauled FixedSizeSplitter
         correctly uses a token-based length function.
         """
+
         # A mock tokenizer where each word is a token of length 1.
-        mock_tokenizer = lambda x: len(x.split())
+        def mock_tokenizer(x: str) -> int:
+            return len(x.split())
 
         splitter = FixedSizeSplitter(
             chunk_size=3,
-            chunk_overlap=1, # 1 word overlap
-            length_function=mock_tokenizer
+            chunk_overlap=1,  # 1 word overlap
+            length_function=mock_tokenizer,
         )
-        text = "one two three four five six seven" # 7 words
+        text = "one two three four five six seven"  # 7 words
         chunks = splitter.split_text(text)
 
         # Expected chunks (size=3 words, overlap=1 word):
@@ -61,10 +62,7 @@ class TestFixedSizeSplitter:
         """
         # This should not raise an error and the splitter should still work as expected.
         splitter = FixedSizeSplitter(
-            chunk_size=10,
-            chunk_overlap=5,
-            separators=["\n\n"],
-            keep_separator=False
+            chunk_size=10, chunk_overlap=5, separators=["\n\n"], keep_separator=False
         )
         text = "This is a test."
         chunks = splitter.split_text(text)

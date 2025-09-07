@@ -73,7 +73,7 @@ class CodeSplitter(TextSplitter):
         if Parser is None:
             raise ImportError(
                 "tree-sitter is not installed. Please install it via `pip install "
-                "\"pyDocumentChunker[code]\"` or `pip install tree-sitter tree-sitter-languages`."
+                '"pyDocumentChunker[code]"` or `pip install tree-sitter tree-sitter-languages`.'
             )
         try:
             self.language: Language = get_language(language)
@@ -166,5 +166,6 @@ class CodeSplitter(TextSplitter):
 
         # Populate overlap metadata and handle runts as post-processing steps
         from ..utils import _populate_overlap_metadata
+
         _populate_overlap_metadata(chunks, text)
         return self._enforce_minimum_chunk_size(chunks, text)

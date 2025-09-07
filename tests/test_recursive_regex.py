@@ -1,5 +1,5 @@
-import pytest
 from pyDocumentChunker import RecursiveCharacterSplitter
+
 
 def test_recursive_splitter_with_variable_width_regex_separator():
     """
@@ -14,7 +14,7 @@ def test_recursive_splitter_with_variable_width_regex_separator():
         chunk_size=15,
         chunk_overlap=2,
         separators=separators,
-        keep_separator=False # This makes the fragments just the words.
+        keep_separator=False,  # This makes the fragments just the words.
     )
     chunks = splitter.split_text(text)
 
@@ -36,18 +36,23 @@ def test_recursive_splitter_with_variable_width_regex_separator():
     # ... and so on.
 
     expected_first_chunk = "This is a test"
-    assert len(chunks) > 1, "The splitter should have split the text into multiple chunks."
-    assert chunk_contents[0] == expected_first_chunk, \
-        f"The first chunk should be '{expected_first_chunk}', but was '{chunk_contents[0]}'"
+    assert (
+        len(chunks) > 1
+    ), "The splitter should have split the text into multiple chunks."
+    assert (
+        chunk_contents[0] == expected_first_chunk
+    ), f"The first chunk should be '{expected_first_chunk}', but was '{chunk_contents[0]}'"
 
     # Verify that no chunk exceeds the chunk_size. This is a critical check.
     for chunk in chunks:
-        assert splitter.length_function(chunk.content) <= splitter.chunk_size, \
-            f"A chunk exceeded the max size of {splitter.chunk_size}"
+        assert (
+            splitter.length_function(chunk.content) <= splitter.chunk_size
+        ), f"A chunk exceeded the max size of {splitter.chunk_size}"
 
     # Verify that the chunk indices are correct
     assert chunks[0].start_index == 0
-    assert chunks[0].end_index == 14 # "This is a test"
+    assert chunks[0].end_index == 14  # "This is a test"
+
 
 def test_recursive_splitter_with_keep_separator_true():
     """
@@ -59,10 +64,7 @@ def test_recursive_splitter_with_keep_separator_true():
 
     # keep_separator=True is the default, but we're explicit.
     splitter = RecursiveCharacterSplitter(
-        chunk_size=15,
-        chunk_overlap=0,
-        separators=separators,
-        keep_separator=True
+        chunk_size=15, chunk_overlap=0, separators=separators, keep_separator=True
     )
     chunks = splitter.split_text(text)
 

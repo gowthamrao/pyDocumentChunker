@@ -2,6 +2,7 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Any, Dict, Optional
 
+
 @dataclass
 class Chunk:
     """
@@ -32,6 +33,7 @@ class Chunk:
         metadata (Dict[str, Any]): A flexible dictionary for any additional,
             unstructured metadata.
     """
+
     content: str
     start_index: int
     end_index: int

@@ -1,8 +1,8 @@
+import copy
 import re
 import unicodedata
 from abc import ABC, abstractmethod
 from typing import Callable, List, Optional
-import copy
 
 from .core import Chunk
 
@@ -95,7 +95,9 @@ class TextSplitter(ABC):
         self.minimum_chunk_size = minimum_chunk_size or 0
         self.min_chunk_merge_strategy = min_chunk_merge_strategy
 
-    def _enforce_minimum_chunk_size(self, chunks: List[Chunk], original_text: str) -> List[Chunk]:
+    def _enforce_minimum_chunk_size(
+        self, chunks: List[Chunk], original_text: str
+    ) -> List[Chunk]:
         """
         Enforces the minimum chunk size by merging or discarding small chunks.
 
@@ -118,10 +120,16 @@ class TextSplitter(ABC):
                 # Iterate forward and merge runts with the previous chunk.
                 i = 1
                 while i < len(merged_chunks):
-                    if self.length_function(merged_chunks[i].content) < self.minimum_chunk_size:
-                        prev_chunk = merged_chunks[i-1]
+                    if (
+                        self.length_function(merged_chunks[i].content)
+                        < self.minimum_chunk_size
+                    ):
+                        prev_chunk = merged_chunks[i - 1]
                         current_chunk = merged_chunks[i]
-                        if (self.length_function(prev_chunk.content) + self.length_function(current_chunk.content)) <= self.chunk_size:
+                        if (
+                            self.length_function(prev_chunk.content)
+                            + self.length_function(current_chunk.content)
+                        ) <= self.chunk_size:
                             prev_chunk.content += current_chunk.content
                             prev_chunk.end_index = current_chunk.end_index
                             merged_chunks.pop(i)
@@ -131,9 +139,18 @@ class TextSplitter(ABC):
                             continue
                     i += 1
                 # Fallback for a runt at the beginning of the list.
-                if len(merged_chunks) > 1 and self.length_function(merged_chunks[0].content) < self.minimum_chunk_size:
-                    if (self.length_function(merged_chunks[0].content) + self.length_function(merged_chunks[1].content)) <= self.chunk_size:
-                        merged_chunks[1].content = merged_chunks[0].content + merged_chunks[1].content
+                if (
+                    len(merged_chunks) > 1
+                    and self.length_function(merged_chunks[0].content)
+                    < self.minimum_chunk_size
+                ):
+                    if (
+                        self.length_function(merged_chunks[0].content)
+                        + self.length_function(merged_chunks[1].content)
+                    ) <= self.chunk_size:
+                        merged_chunks[1].content = (
+                            merged_chunks[0].content + merged_chunks[1].content
+                        )
                         merged_chunks[1].start_index = merged_chunks[0].start_index
                         merged_chunks.pop(0)
 
@@ -141,17 +158,32 @@ class TextSplitter(ABC):
                 # Iterate backward and merge runts with the next chunk.
                 i = len(merged_chunks) - 2
                 while i >= 0:
-                    if self.length_function(merged_chunks[i].content) < self.minimum_chunk_size:
+                    if (
+                        self.length_function(merged_chunks[i].content)
+                        < self.minimum_chunk_size
+                    ):
                         current_chunk = merged_chunks[i]
-                        next_chunk = merged_chunks[i+1]
-                        if (self.length_function(current_chunk.content) + self.length_function(next_chunk.content)) <= self.chunk_size:
-                            next_chunk.content = current_chunk.content + next_chunk.content
+                        next_chunk = merged_chunks[i + 1]
+                        if (
+                            self.length_function(current_chunk.content)
+                            + self.length_function(next_chunk.content)
+                        ) <= self.chunk_size:
+                            next_chunk.content = (
+                                current_chunk.content + next_chunk.content
+                            )
                             next_chunk.start_index = current_chunk.start_index
                             merged_chunks.pop(i)
                     i -= 1
                 # Fallback for a runt at the end of the list.
-                if len(merged_chunks) > 1 and self.length_function(merged_chunks[-1].content) < self.minimum_chunk_size:
-                    if (self.length_function(merged_chunks[-1].content) + self.length_function(merged_chunks[-2].content)) <= self.chunk_size:
+                if (
+                    len(merged_chunks) > 1
+                    and self.length_function(merged_chunks[-1].content)
+                    < self.minimum_chunk_size
+                ):
+                    if (
+                        self.length_function(merged_chunks[-1].content)
+                        + self.length_function(merged_chunks[-2].content)
+                    ) <= self.chunk_size:
                         merged_chunks[-2].content += merged_chunks[-1].content
                         merged_chunks[-2].end_index = merged_chunks[-1].end_index
                         merged_chunks.pop(-1)
@@ -165,6 +197,7 @@ class TextSplitter(ABC):
         # This addresses a bug where merging runts would not update the overlap
         # content of neighboring chunks.
         from .utils import _populate_overlap_metadata
+
         _populate_overlap_metadata(merged_chunks, original_text)
 
         return merged_chunks
@@ -212,9 +245,7 @@ class TextSplitter(ABC):
         """
         pass  # pragma: no cover
 
-    def chunk(
-        self, text: str, source_document_id: Optional[str] = None
-    ) -> List[Chunk]:
+    def chunk(self, text: str, source_document_id: Optional[str] = None) -> List[Chunk]:
         """
         A convenience method that provides a more intuitive alias for `split_text`.
 

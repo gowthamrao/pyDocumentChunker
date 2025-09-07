@@ -1,6 +1,7 @@
+from unittest.mock import patch
+
 import pytest
 from pyDocumentChunker import MarkdownSplitter
-from unittest.mock import patch
 
 # FRD Requirement Being Tested:
 # R-3.4.3: The strategy MUST prioritize splitting at higher-level structural boundaries.
@@ -36,6 +37,7 @@ This is a paragraph after the list.
 This is a very long section with no subheadings. It is designed to be much larger than the chunk size to test the fallback mechanism. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. More and more and more text to ensure it is very long indeed.
 """
 
+
 def test_hierarchical_and_block_type_splitting():
     """
     Tests that the splitter correctly splits based on header hierarchy AND block type.
@@ -57,7 +59,10 @@ def test_hierarchical_and_block_type_splitting():
 
     # Chunk 2: Section 1.1
     assert chunks[1].content.strip().startswith("## Section 1.1 Title")
-    assert chunks[1].hierarchical_context == {"H1": "Section 1 Title", "H2": "Section 1.1 Title"}
+    assert chunks[1].hierarchical_context == {
+        "H1": "Section 1 Title",
+        "H2": "Section 1.1 Title",
+    }
 
     # Chunk 3: Section 2 Title + first paragraph
     assert chunks[2].content.strip().startswith("# Section 2 Title")
@@ -67,33 +72,46 @@ def test_hierarchical_and_block_type_splitting():
 
     # Chunk 4: Section 2.1
     assert chunks[3].content.strip().startswith("## Section 2.1 Title")
-    assert chunks[3].hierarchical_context == {"H1": "Section 2 Title", "H2": "Section 2.1 Title"}
+    assert chunks[3].hierarchical_context == {
+        "H1": "Section 2 Title",
+        "H2": "Section 2.1 Title",
+    }
 
     # Chunk 5: Section 2.2 Title + paragraph before list
     assert chunks[4].content.strip().startswith("## Section 2.2 Title")
     assert "contains a list" in chunks[4].content
     assert "List item 1" not in chunks[4].content
-    assert chunks[4].hierarchical_context == {"H1": "Section 2 Title", "H2": "Section 2.2 Title"}
+    assert chunks[4].hierarchical_context == {
+        "H1": "Section 2 Title",
+        "H2": "Section 2.2 Title",
+    }
 
     # Chunk 6: The list itself (this is the new behavior)
     assert chunks[5].content.strip().startswith("- List item 1")
     assert "paragraph after the list" not in chunks[5].content
-    assert chunks[5].hierarchical_context == {"H1": "Section 2 Title", "H2": "Section 2.2 Title"}
+    assert chunks[5].hierarchical_context == {
+        "H1": "Section 2 Title",
+        "H2": "Section 2.2 Title",
+    }
 
     # Chunk 7: The paragraph after the list
     assert chunks[6].content.strip().startswith("This is a paragraph after the list.")
-    assert chunks[6].hierarchical_context == {"H1": "Section 2 Title", "H2": "Section 2.2 Title"}
+    assert chunks[6].hierarchical_context == {
+        "H1": "Section 2 Title",
+        "H2": "Section 2.2 Title",
+    }
 
     # Chunks 8 & 9: Fallback split of Section 3
     assert chunks[7].content.strip().startswith("# Section 3 Title")
     assert "Lorem ipsum" in chunks[7].content
-    assert "More and more" not in chunks[7].content # Check that it was split
+    assert "More and more" not in chunks[7].content  # Check that it was split
     assert chunks[7].hierarchical_context == {"H1": "Section 3 Title"}
     assert chunks[7].chunking_strategy_used == "markdown-fallback"
 
     assert "More and more" in chunks[8].content
     assert chunks[8].hierarchical_context == {"H1": "Section 3 Title"}
     assert chunks[8].chunking_strategy_used == "markdown-fallback"
+
 
 def test_import_error_if_markdown_it_not_installed():
     """
@@ -103,11 +121,13 @@ def test_import_error_if_markdown_it_not_installed():
         with pytest.raises(ImportError):
             MarkdownSplitter()
 
+
 def test_empty_and_whitespace_text():
     """Tests that the splitter handles empty or whitespace-only text gracefully."""
     splitter = MarkdownSplitter()
     assert splitter.split_text("") == []
     assert splitter.split_text("   \n \t ") == []
+
 
 def test_private_methods():
     """Tests the private helper methods directly."""
@@ -116,7 +136,9 @@ def test_private_methods():
     line_indices = splitter._get_line_start_indices(text)
 
     # Mock SyntaxTreeNode
-    node = patch("pyDocumentChunker.strategies.structure.markdown.SyntaxTreeNode").start()
+    node = patch(
+        "pyDocumentChunker.strategies.structure.markdown.SyntaxTreeNode"
+    ).start()
     node.map = (0, 2)
     node.children = []
 

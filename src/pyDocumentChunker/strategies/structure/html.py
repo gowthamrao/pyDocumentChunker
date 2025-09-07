@@ -3,13 +3,24 @@ import warnings
 from typing import Any, Dict, List, Optional, Tuple
 
 from bs4 import BeautifulSoup
+
 from ...base import TextSplitter
 from ...core import Chunk
 from ..recursive import RecursiveCharacterSplitter
 
 # List of tags that are typically block-level and contain content.
 DEFAULT_BLOCK_TAGS = [
-    "p", "h1", "h2", "h3", "h4", "h5", "h6", "li", "th", "td", "caption"
+    "p",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "li",
+    "th",
+    "td",
+    "caption",
 ]
 # Tags to be removed completely from the document before processing.
 DEFAULT_STRIP_TAGS = ["script", "style", "head", "nav", "footer", "aside"]
@@ -77,7 +88,9 @@ class HTMLSplitter(TextSplitter):
                 continue
 
             # Preprocess the text for the chunk content
-            processed_content = self._preprocess(tag.get_text(separator=" ", strip=True))
+            processed_content = self._preprocess(
+                tag.get_text(separator=" ", strip=True)
+            )
             if not processed_content:
                 continue
 
@@ -100,7 +113,9 @@ class HTMLSplitter(TextSplitter):
                             )
                 current = current.parent
 
-            sorted_context = dict(sorted(header_context.items(), key=lambda item: item[0]))
+            sorted_context = dict(
+                sorted(header_context.items(), key=lambda item: item[0])
+            )
             blocks.append((processed_content, start_index, end_index, sorted_context))
 
         return blocks
@@ -116,7 +131,9 @@ class HTMLSplitter(TextSplitter):
         try:
             soup = BeautifulSoup(text, "html5lib")
         except Exception as e:
-            warnings.warn(f"Failed to parse HTML with html5lib, falling back to lxml. Error: {e}")
+            warnings.warn(
+                f"Failed to parse HTML with html5lib, falling back to lxml. Error: {e}"
+            )
             soup = BeautifulSoup(text, "lxml")
 
         # --- Tag Removal ---
@@ -156,15 +173,17 @@ class HTMLSplitter(TextSplitter):
             for b in reversed(current_chunk_blocks):
                 merged_context.update(b[3])
 
-            chunks.append(Chunk(
-                content=content,
-                start_index=start_idx,
-                end_index=end_idx,
-                sequence_number=sequence_number,
-                source_document_id=source_document_id,
-                hierarchical_context=merged_context,
-                chunking_strategy_used="html",
-            ))
+            chunks.append(
+                Chunk(
+                    content=content,
+                    start_index=start_idx,
+                    end_index=end_idx,
+                    sequence_number=sequence_number,
+                    source_document_id=source_document_id,
+                    hierarchical_context=merged_context,
+                    chunking_strategy_used="html",
+                )
+            )
             sequence_number += 1
             current_chunk_blocks = []
 
@@ -174,24 +193,33 @@ class HTMLSplitter(TextSplitter):
                 # Split the oversized block using the fallback
                 fallback_chunks = self._fallback_splitter.split_text(block_text)
                 for fb_chunk in fallback_chunks:
-                    chunks.append(Chunk(
-                        content=fb_chunk.content,
-                        start_index=block_start,
-                        end_index=block_end,
-                        sequence_number=sequence_number,
-                        source_document_id=source_document_id,
-                        hierarchical_context=block_context,
-                        chunking_strategy_used="html-fallback",
-                    ))
+                    chunks.append(
+                        Chunk(
+                            content=fb_chunk.content,
+                            start_index=block_start,
+                            end_index=block_end,
+                            sequence_number=sequence_number,
+                            source_document_id=source_document_id,
+                            hierarchical_context=block_context,
+                            chunking_strategy_used="html-fallback",
+                        )
+                    )
                     sequence_number += 1
                 continue
 
             # Check if adding the next block would exceed the chunk size.
-            potential_content = " ".join(b[0] for b in current_chunk_blocks + [(block_text, 0, 0, {})])
-            if self.length_function(potential_content) > self.chunk_size and current_chunk_blocks:
+            potential_content = " ".join(
+                b[0] for b in current_chunk_blocks + [(block_text, 0, 0, {})]
+            )
+            if (
+                self.length_function(potential_content) > self.chunk_size
+                and current_chunk_blocks
+            ):
                 flush_current_chunk()
 
-            current_chunk_blocks.append((block_text, block_start, block_end, block_context))
+            current_chunk_blocks.append(
+                (block_text, block_start, block_end, block_context)
+            )
 
         flush_current_chunk()
 
@@ -200,6 +228,7 @@ class HTMLSplitter(TextSplitter):
         # by design, the fallback splitter does, and runt merging can also
         # introduce overlaps. Therefore, this step is essential for consistency.
         from ...utils import _populate_overlap_metadata
+
         _populate_overlap_metadata(chunks, text)
 
         # Enforce the minimum chunk size. This call now includes the original text

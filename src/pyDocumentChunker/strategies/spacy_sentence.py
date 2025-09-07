@@ -2,11 +2,12 @@ from typing import Any, List, Optional, Tuple
 
 from ..base import TextSplitter
 from ..core import Chunk
-from .recursive import RecursiveCharacterSplitter
 from ..utils import _populate_overlap_metadata
+from .recursive import RecursiveCharacterSplitter
 
 try:
     import spacy
+
     # Load the English model once
     NLP = spacy.load("en_core_web_sm")
 except (ImportError, OSError):
@@ -30,7 +31,7 @@ class SpacySentenceSplitter(TextSplitter):
         if spacy is None or NLP is None:
             raise ImportError(
                 "Spacy is not installed or the model 'en_core_web_sm' could not be loaded. "
-                "Please install it via `pip install \"pyDocumentChunker[spacy]\"` and download the model "
+                'Please install it via `pip install "pyDocumentChunker[spacy]"` and download the model '
                 "via `python -m spacy download en_core_web_sm`."
             )
 
@@ -100,9 +101,7 @@ class SpacySentenceSplitter(TextSplitter):
                     )
                 )
 
-                overlap_idx = max(
-                    0, len(current_chunk_sents) - self.overlap_sentences
-                )
+                overlap_idx = max(0, len(current_chunk_sents) - self.overlap_sentences)
                 current_chunk_sents = current_chunk_sents[overlap_idx:]
 
             current_chunk_sents.append((sent, start, end))

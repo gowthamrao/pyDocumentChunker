@@ -6,6 +6,7 @@ This module is designed to be optional and only imports dependencies when the
 utility functions are actually called, keeping the core package's dependency
 footprint minimal.
 """
+
 from typing import Callable
 
 # A cache to store initialized tokenizer objects to avoid redundant setup.

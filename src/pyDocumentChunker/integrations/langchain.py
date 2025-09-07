@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, List, Optional
 
 from ..base import TextSplitter as AdvancedTextSplitter
 from ..core import Chunk
@@ -44,7 +44,7 @@ class LangChainWrapper(LangChainTextSplitter):
         if LangChainTextSplitter is object:
             raise ImportError(
                 "langchain-core is not installed. Please install it via `pip install "
-                "\"pyDocumentChunker[langchain]\"` or `pip install langchain-core`."
+                '"pyDocumentChunker[langchain]"` or `pip install langchain-core`.'
             )
 
     def _chunk_to_document(self, chunk: Chunk) -> Document:
@@ -84,9 +84,13 @@ class LangChainWrapper(LangChainTextSplitter):
             source_metadata = metadatas[i]
             # The source_document_id can be passed from the metadata.
             # We look for a common key like 'source' or 'document_id'.
-            source_doc_id = source_metadata.get("source") or source_metadata.get("document_id")
+            source_doc_id = source_metadata.get("source") or source_metadata.get(
+                "document_id"
+            )
 
-            chunks = self.splitter.split_text(text, source_document_id=str(source_doc_id) if source_doc_id else None)
+            chunks = self.splitter.split_text(
+                text, source_document_id=str(source_doc_id) if source_doc_id else None
+            )
             for chunk in chunks:
                 # Combine original metadata with the chunk's rich metadata
                 # The chunk's metadata takes precedence.
@@ -94,7 +98,9 @@ class LangChainWrapper(LangChainTextSplitter):
                 new_metadata.update(chunk.to_dict())
                 page_content = new_metadata.pop("content")
 
-                documents.append(Document(page_content=page_content, metadata=new_metadata))
+                documents.append(
+                    Document(page_content=page_content, metadata=new_metadata)
+                )
 
         return documents
 

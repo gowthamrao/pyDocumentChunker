@@ -50,7 +50,10 @@ tokenizers = [
 # For development and testing
 dev = [
     "pytest>=8.0.0",
-    "pyDocumentChunker[tokenizers]"
+    "pyDocumentChunker[tokenizers]",
+    "black>=24.0.0",
+    "ruff>=0.1.0",
+    "pre-commit>=3.0.0",
 ]
 
 
@@ -60,3 +63,15 @@ dev = [
 
 [tool.pytest.ini_options]
 pythonpath = "src"
+
+[tool.black]
+line-length = 88
+target-version = ['py38']
+
+[tool.ruff]
+line-length = 88
+target-version = "py38"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = ["E501"]

@@ -1,21 +1,20 @@
-import warnings
 from typing import Any, Callable, List, Literal, Optional
 
 from ..base import TextSplitter
 from ..core import Chunk
-from .recursive import RecursiveCharacterSplitter
-from .sentence import SentenceSplitter
 from ..utils import _populate_overlap_metadata
+from .recursive import RecursiveCharacterSplitter
 
 try:
-    import numpy as np
-    from numpy.linalg import norm
-    import nltk
     import string
+
+    import nltk
+    import numpy as np
     from nltk.tokenize.punkt import PunktSentenceTokenizer
+    from numpy.linalg import norm
 except ImportError:
     np = None  # type: ignore
-    nltk = None # type: ignore
+    nltk = None  # type: ignore
 
 BreakpointMethod = Literal["percentile", "std_dev", "absolute"]
 
@@ -60,7 +59,7 @@ class SemanticSplitter(TextSplitter):
         if np is None:
             raise ImportError(
                 "numpy is not installed. Please install it via `pip install "
-                "\"pyDocumentChunker[semantic]\"` or `pip install numpy`."
+                '"pyDocumentChunker[semantic]"` or `pip install numpy`.'
             )
         self.embedding_function = embedding_function
         self.breakpoint_method = breakpoint_method
@@ -98,9 +97,11 @@ class SemanticSplitter(TextSplitter):
         # This logic is intentionally copied from SentenceSplitter to ensure this
         # strategy gets a true list of sentences, not pre-chunked groups.
         try:
-            tokenizer: PunktSentenceTokenizer = nltk.data.load("tokenizers/punkt/english.pickle")
+            tokenizer: PunktSentenceTokenizer = nltk.data.load(
+                "tokenizers/punkt/english.pickle"
+            )
         except LookupError:
-             raise RuntimeError(
+            raise RuntimeError(
                 "NLTK's 'punkt' tokenizer model is not downloaded. Please run "
                 "`python -c \"import nltk; nltk.download('punkt')\"` to download it."
             )
@@ -117,7 +118,9 @@ class SemanticSplitter(TextSplitter):
 
         # Create Chunk objects for each sentence for easier processing
         sentences = [
-            Chunk(content=sent_text, start_index=start, end_index=end, sequence_number=i)
+            Chunk(
+                content=sent_text, start_index=start, end_index=end, sequence_number=i
+            )
             for i, (sent_text, start, end) in enumerate(raw_sentences)
         ]
 
@@ -132,7 +135,9 @@ class SemanticSplitter(TextSplitter):
         if self.breakpoint_method == "percentile":
             threshold = np.percentile(similarities, self.breakpoint_threshold)
         elif self.breakpoint_method == "std_dev":
-            threshold = np.mean(similarities) - self.breakpoint_threshold * np.std(similarities)
+            threshold = np.mean(similarities) - self.breakpoint_threshold * np.std(
+                similarities
+            )
         else:  # 'absolute'
             threshold = self.breakpoint_threshold
 
@@ -146,13 +151,16 @@ class SemanticSplitter(TextSplitter):
         for bp_idx in breakpoint_indices:
             end_sent_idx = bp_idx + 1
             group = sentences[start_sent_idx:end_sent_idx]
-            if not group: continue
+            if not group:
+                continue
 
             content = " ".join(s.content for s in group)
             group_start_char_idx = group[0].start_index
 
             if self.length_function(content) > self.chunk_size:
-                sub_chunks = self._fallback_splitter.split_text(content, source_document_id)
+                sub_chunks = self._fallback_splitter.split_text(
+                    content, source_document_id
+                )
                 for sub_chunk in sub_chunks:
                     # Adjust indices to be relative to the original document
                     sub_chunk.start_index += group_start_char_idx
@@ -161,7 +169,16 @@ class SemanticSplitter(TextSplitter):
                     final_chunks.append(sub_chunk)
                     sequence_number += 1
             else:
-                final_chunks.append(Chunk(content=content, start_index=group_start_char_idx, end_index=group[-1].end_index, sequence_number=sequence_number, source_document_id=source_document_id, chunking_strategy_used="semantic"))
+                final_chunks.append(
+                    Chunk(
+                        content=content,
+                        start_index=group_start_char_idx,
+                        end_index=group[-1].end_index,
+                        sequence_number=sequence_number,
+                        source_document_id=source_document_id,
+                        chunking_strategy_used="semantic",
+                    )
+                )
                 sequence_number += 1
             start_sent_idx = end_sent_idx
 
@@ -171,8 +188,10 @@ class SemanticSplitter(TextSplitter):
             content = " ".join(s.content for s in last_group)
             group_start_char_idx = last_group[0].start_index
             if self.length_function(content) > self.chunk_size:
-                 sub_chunks = self._fallback_splitter.split_text(content, source_document_id)
-                 for sub_chunk in sub_chunks:
+                sub_chunks = self._fallback_splitter.split_text(
+                    content, source_document_id
+                )
+                for sub_chunk in sub_chunks:
                     # Adjust indices to be relative to the original document
                     sub_chunk.start_index += group_start_char_idx
                     sub_chunk.end_index += group_start_char_idx
@@ -180,7 +199,16 @@ class SemanticSplitter(TextSplitter):
                     final_chunks.append(sub_chunk)
                     sequence_number += 1
             else:
-                final_chunks.append(Chunk(content=content, start_index=group_start_char_idx, end_index=last_group[-1].end_index, sequence_number=sequence_number, source_document_id=source_document_id, chunking_strategy_used="semantic"))
+                final_chunks.append(
+                    Chunk(
+                        content=content,
+                        start_index=group_start_char_idx,
+                        end_index=last_group[-1].end_index,
+                        sequence_number=sequence_number,
+                        source_document_id=source_document_id,
+                        chunking_strategy_used="semantic",
+                    )
+                )
 
         # Post-process to add overlap metadata using the shared utility.
         _populate_overlap_metadata(final_chunks, text)
