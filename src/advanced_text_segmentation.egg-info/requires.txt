@@ -10,22 +10,21 @@ advanced-text-segmentation[tokenizers]
 [html]
 beautifulsoup4>=4.12.3
 lxml>=5.2.0
-html5lib
 
 [langchain]
 langchain-core
 
 [llamaindex]
-llama-index-core>=0.10.0
+llama-index-core>=0.12.29
 
 [markdown]
 markdown-it-py>=3.0.0
 
 [nlp]
-nltk>=3.8
+nltk>3.8.1
 
 [semantic]
-numpy>=1.26
+numpy>=2.0.0
 
 [spacy]
 spacy>=3.7.0

@@ -22,13 +22,13 @@ dependencies = []
 [project.optional-dependencies]
 # R-6.3.2: Optional dependencies for specialized features
 nlp = [
-    "nltk>=3.8",
+    "nltk>3.8.1",
 ]
 spacy = [
     "spacy>=3.7.0",
 ]
 semantic = [
-    "numpy>=1.26",
+    "numpy>=2.0.0",
 ]
 code = [
     "tree-sitter>=0.21.0",
@@ -39,12 +39,11 @@ markdown = [
 ]
 html = [
     "beautifulsoup4>=4.12.3",
-    "lxml>=5.2.0",
-    "html5lib"
+    "lxml>=5.2.0"
 ]
 # For integration with other frameworks
 langchain = ["langchain-core"]
-llamaindex = ["llama-index-core>=0.10.0"]
+llamaindex = ["llama-index-core>=0.12.29"]
 tokenizers = [
     "tiktoken>=0.7.0"
 ]
