@@ -1,7 +1,8 @@
 from unittest.mock import patch
 
 import pytest
-from pyDocumentChunker import MarkdownSplitter
+
+from py_document_chunker import MarkdownSplitter
 
 # FRD Requirement Being Tested:
 # R-3.4.3: The strategy MUST prioritize splitting at higher-level structural boundaries.
@@ -117,7 +118,7 @@ def test_import_error_if_markdown_it_not_installed():
     """
     Tests that an ImportError is raised if markdown-it-py is not installed.
     """
-    with patch("pyDocumentChunker.strategies.structure.markdown.MarkdownIt", None):
+    with patch("py_document_chunker.strategies.structure.markdown.MarkdownIt", None):
         with pytest.raises(ImportError):
             MarkdownSplitter()
 
@@ -137,7 +138,7 @@ def test_private_methods():
 
     # Mock SyntaxTreeNode
     node = patch(
-        "pyDocumentChunker.strategies.structure.markdown.SyntaxTreeNode"
+        "py_document_chunker.strategies.structure.markdown.SyntaxTreeNode"
     ).start()
     node.map = (0, 2)
     node.children = []

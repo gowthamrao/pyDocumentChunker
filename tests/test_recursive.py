@@ -1,4 +1,4 @@
-from pyDocumentChunker import RecursiveCharacterSplitter
+from py_document_chunker import RecursiveCharacterSplitter
 
 TEXT = """
 Title: The Great Adventure

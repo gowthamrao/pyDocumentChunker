@@ -1,7 +1,7 @@
 import pytest
 
 try:
-    from text_segmentation.strategies.structure.html import HTMLSplitter
+    from py_document_chunker.strategies.structure.html import HTMLSplitter
 
     BS4_LXML_AVAILABLE = True
 except ImportError:
@@ -162,7 +162,8 @@ def test_html_parser_fallback(monkeypatch):
         return OriginalBeautifulSoup(*args, **kwargs)
 
     monkeypatch.setattr(
-        "text_segmentation.strategies.structure.html.BeautifulSoup", mock_beautiful_soup
+        "py_document_chunker.strategies.structure.html.BeautifulSoup",
+        mock_beautiful_soup,
     )
 
     splitter = HTMLSplitter()

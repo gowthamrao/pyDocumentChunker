@@ -1,5 +1,6 @@
 import pytest
-from pyDocumentChunker import Chunk, FixedSizeSplitter
+
+from py_document_chunker import Chunk, FixedSizeSplitter
 
 
 class TestBaseFunctionality:

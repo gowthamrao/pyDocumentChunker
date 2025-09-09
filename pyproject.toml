@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "pyDocumentChunker"
+name = "py_document_chunker"
 version = "0.1.0"
 description = "A state-of-the-art Python package for advanced text segmentation (chunking)."
 readme = { file = "README.md", content-type = "text/markdown" }
@@ -50,7 +50,7 @@ tokenizers = [
 # For development and testing
 dev = [
     "pytest>=8.0.0",
-    "pyDocumentChunker[tokenizers,nlp,spacy,semantic,code,markdown,langchain,llamaindex]",
+    "py_document_chunker[tokenizers,nlp,spacy,semantic,code,markdown,langchain,llamaindex]",
     "black>=24.0.0",
     "ruff>=0.1.0",
     "pre-commit>=3.0.0",
@@ -58,8 +58,8 @@ dev = [
 
 
 [project.urls]
-"Homepage" = "https://github.com/OHDSI/pyDocumentChunker"
-"Bug Tracker" = "https://github.com/OHDSI/pyDocumentChunker/issues"
+"Homepage" = "https://github.com/OHDSI/py_document_chunker"
+"Bug Tracker" = "https://github.com/OHDSI/py_document_chunker/issues"
 
 [tool.pytest.ini_options]
 pythonpath = "src"

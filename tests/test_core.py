@@ -1,5 +1,6 @@
 import pytest
-from pyDocumentChunker import Chunk
+
+from py_document_chunker import Chunk
 
 
 def test_chunk_post_init_validations():
