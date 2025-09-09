@@ -17,7 +17,10 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Artificial Intelligence"
 ]
 requires-python = ">=3.8"
-dependencies = []
+dependencies = [
+    "beautifulsoup4>=4.12.3",
+    "lxml>=5.2.0"
+]
 
 [project.optional-dependencies]
 # R-6.3.2: Optional dependencies for specialized features
@@ -37,10 +40,7 @@ code = [
 markdown = [
     "markdown-it-py>=3.0.0"
 ]
-html = [
-    "beautifulsoup4>=4.12.3",
-    "lxml>=5.2.0"
-]
+html = []
 # For integration with other frameworks
 langchain = ["langchain-core"]
 llamaindex = ["llama-index-core>=0.12.29"]
@@ -50,7 +50,7 @@ tokenizers = [
 # For development and testing
 dev = [
     "pytest>=8.0.0",
-    "pyDocumentChunker[tokenizers]",
+    "pyDocumentChunker[tokenizers,nlp,spacy,semantic,code,markdown,langchain,llamaindex]",
     "black>=24.0.0",
     "ruff>=0.1.0",
     "pre-commit>=3.0.0",
