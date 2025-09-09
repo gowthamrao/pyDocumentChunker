@@ -44,7 +44,7 @@ class LangChainWrapper(LangChainTextSplitter):
         if LangChainTextSplitter is object:
             raise ImportError(
                 "langchain-core is not installed. Please install it via `pip install "
-                '"pyDocumentChunker[langchain]"` or `pip install langchain-core`.'
+                '"py_document_chunker[langchain]"` or `pip install langchain-core`.'
             )
 
     def _chunk_to_document(self, chunk: Chunk) -> Document:

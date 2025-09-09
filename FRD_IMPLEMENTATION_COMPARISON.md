@@ -1,6 +1,6 @@
-# FRD vs. Implementation Comparison: pyDocumentChunker
+# FRD vs. Implementation Comparison: py_document_chunker
 
-This document provides a detailed comparison of the Functional Requirements Document (FRD) for `pyDocumentChunker` against its actual implementation. Each requirement is assessed, and executable code is provided to demonstrate its fulfillment.
+This document provides a detailed comparison of the Functional Requirements Document (FRD) for `py_document_chunker` against its actual implementation. Each requirement is assessed, and executable code is provided to demonstrate its fulfillment.
 
 **Overall Assessment:** The package meets or exceeds all specified functional requirements. The implementation is robust, modular, and directly reflects the architecture and features outlined in the FRD.
 
@@ -26,7 +26,7 @@ All input and preprocessing requirements are fully implemented.
 *   **Status:** **Met.** All splitter classes operate on standard Python strings.
 
 ```python
-from pyDocumentChunker.strategies import FixedSizeSplitter
+from py_document_chunker.strategies import FixedSizeSplitter
 
 splitter = FixedSizeSplitter()
 text_input = "This is a standard Python string that the splitter will process."
@@ -42,7 +42,7 @@ print(f"Successfully processed a standard string and got {len(chunks)} chunk(s).
 *   **Status:** **Met.** The package provides `MarkdownSplitter` and `HTMLSplitter` which parse structured text and can preserve context in metadata.
 
 ```python
-from pyDocumentChunker.strategies.structure import MarkdownSplitter
+from py_document_chunker.strategies.structure import MarkdownSplitter
 
 markdown_text = "# Chapter 1\n\nThis is the first paragraph.\n\n## Section 1.1\n\nThis is a subsection."
 # This splitter recognizes Markdown headers as boundaries.
@@ -60,7 +60,7 @@ for chunk in chunks:
 *   **Status:** **Met.** The base `TextSplitter` class provides parameters for `normalize_whitespace`, `unicode_normalize`, and `strip_control_chars`.
 
 ```python
-from pyDocumentChunker.strategies import FixedSizeSplitter
+from py_document_chunker.strategies import FixedSizeSplitter
 
 text_with_issues = "Text with   extra spaces.\n\nAnd multiple newlines.\x00 And a null byte."
 
@@ -84,7 +84,7 @@ All specified chunking strategies are implemented with the required features.
 *   **Status:** **Met.** `FixedSizeSplitter` splits text into chunks of a maximum `chunk_size` with a defined `chunk_overlap`.
 
 ```python
-from pyDocumentChunker.strategies import FixedSizeSplitter
+from py_document_chunker.strategies import FixedSizeSplitter
 
 text = "This is a simple text that will be split into fixed-size chunks based on character count."
 splitter = FixedSizeSplitter(chunk_size=30, chunk_overlap=10)
@@ -98,7 +98,7 @@ for chunk in chunks:
 *   **Status:** **Met.** `RecursiveCharacterSplitter` splits text using a configurable, ordered list of separators and includes a fallback to a hard split.
 
 ```python
-from pyDocumentChunker.strategies import RecursiveCharacterSplitter
+from py_document_chunker.strategies import RecursiveCharacterSplitter
 
 text = "First paragraph.\n\nSecond paragraph. It has two sentences.\nThird paragraph."
 # The splitter will first try to split by "\n\n", then by ". "
@@ -117,8 +117,8 @@ for chunk in chunks:
 *   **Status:** **Met.** `SentenceSplitter` (using NLTK) and `SpacySentenceSplitter` (using SpaCy) are available. They require the `[nlp]` or `[spacy]` extra.
 
 ```python
-# Note: Requires `pip install "pyDocumentChunker[nlp]"`
-from pyDocumentChunker.strategies import SentenceSplitter
+# Note: Requires `pip install "py_document_chunker[nlp]"`
+from py_document_chunker.strategies import SentenceSplitter
 
 text = "This is the first sentence. Here is the second sentence, which is a bit longer. Finally, the third."
 # Aggregates sentences into chunks without exceeding chunk_size
@@ -136,9 +136,9 @@ for chunk in chunks:
 *   **Status:** **Met.** `SemanticSplitter` is implemented. It requires a pluggable embedding function and supports multiple methods for breakpoint detection. It requires the `[semantic]` extra.
 
 ```python
-# Note: Requires `pip install "pyDocumentChunker[semantic]"`
+# Note: Requires `pip install "py_document_chunker[semantic]"`
 import numpy as np
-from pyDocumentChunker.strategies import SemanticSplitter
+from py_document_chunker.strategies import SemanticSplitter
 
 # R-3.5.1: A dummy pluggable embedding function
 def dummy_embed_func(texts):
@@ -167,8 +167,8 @@ for chunk in chunks:
 *   **Status:** **Met.** `CodeSplitter` uses `tree-sitter` to parse code and split at syntactic boundaries. It requires the `[code]` extra.
 
 ```python
-# Note: Requires `pip install "pyDocumentChunker[code]"`
-from pyDocumentChunker.strategies import CodeSplitter
+# Note: Requires `pip install "py_document_chunker[code]"`
+from py_document_chunker.strategies import CodeSplitter
 
 python_code = '''
 class MyClass:
@@ -197,7 +197,7 @@ All configuration and optimization parameters are implemented.
 *   **Status:** **Met.** `chunk_size`, `chunk_overlap`, and `length_function` are available in all splitters. The following example demonstrates a custom `length_function`.
 
 ```python
-from pyDocumentChunker.strategies import FixedSizeSplitter
+from py_document_chunker.strategies import FixedSizeSplitter
 
 # A custom length function that measures length in "words"
 def word_count(text: str) -> int:
@@ -219,7 +219,7 @@ for chunk in chunks:
 *   **Status:** **Met.** The `minimum_chunk_size` and `min_chunk_merge_strategy` parameters are implemented in the base class.
 
 ```python
-from pyDocumentChunker.strategies import RecursiveCharacterSplitter
+from py_document_chunker.strategies import RecursiveCharacterSplitter
 
 text = "A short sentence. A very long sentence that will form its own chunk. Another short one."
 splitter = RecursiveCharacterSplitter(
@@ -246,7 +246,7 @@ The output schema and all specified metadata fields are fully implemented.
 
 ```python
 import json
-from pyDocumentChunker.strategies.structure import MarkdownSplitter
+from py_document_chunker.strategies.structure import MarkdownSplitter
 
 markdown_text = "# Title\n\nSome content."
 splitter = MarkdownSplitter(chunk_size=100)
@@ -272,9 +272,9 @@ The architectural, integration, and dependency management requirements are fully
 *   **Status:** **Met.** The `LangChainWrapper` provides seamless integration. Requires the `[langchain]` extra.
 
 ```python
-# Note: Requires `pip install "pyDocumentChunker[langchain]"`
-from pyDocumentChunker.strategies import SentenceSplitter
-from pyDocumentChunker.integrations import LangChainWrapper
+# Note: Requires `pip install "py_document_chunker[langchain]"`
+from py_document_chunker.strategies import SentenceSplitter
+from py_document_chunker.integrations import LangChainWrapper
 
 # 1. Create a native splitter
 sentence_splitter = SentenceSplitter(chunk_size=80)
@@ -299,7 +299,7 @@ for doc in documents:
 *   **Status:** **Met.** The core package is dependency-free. Optional features are managed via extras in `pyproject.toml`.
 *   **R-6.3.1 (Minimal Dependencies):** Verified.
 *   **R-6.3.2 (Optional Extras):** Verified. You can install features using commands like:
-    *   `pip install "pyDocumentChunker[nlp]"`
-    *   `pip install "pyDocumentChunker[semantic]"`
-    *   `pip install "pyDocumentChunker[code]"`
-    *   `pip install "pyDocumentChunker[langchain]"`
+    *   `pip install "py_document_chunker[nlp]"`
+    *   `pip install "py_document_chunker[semantic]"`
+    *   `pip install "py_document_chunker[code]"`
+    *   `pip install "py_document_chunker[langchain]"`

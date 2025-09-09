@@ -1,5 +1,6 @@
 import pytest
-from pyDocumentChunker import SpacySentenceSplitter
+
+from py_document_chunker import SpacySentenceSplitter
 
 # Mark the entire module as skipping if spacy is not available
 spacy = pytest.importorskip(
@@ -183,7 +184,7 @@ def test_import_error_if_spacy_not_installed(monkeypatch):
 
     monkeypatch.setitem(sys.modules, "spacy", None)
 
-    from pyDocumentChunker.strategies import spacy_sentence
+    from py_document_chunker.strategies import spacy_sentence
 
     # Reloading the module should now set NLP to None
     importlib.reload(spacy_sentence)
@@ -198,7 +199,7 @@ def test_model_not_found_error(monkeypatch):
     """Tests an informative error is raised if the model is not downloaded."""
     import importlib
 
-    from pyDocumentChunker.strategies import spacy_sentence
+    from py_document_chunker.strategies import spacy_sentence
 
     def mock_load_error(model_name):
         raise OSError(f"Can't find model '{model_name}'.")

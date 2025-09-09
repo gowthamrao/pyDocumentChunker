@@ -2,8 +2,9 @@ import copy
 from typing import List, Optional
 
 import pytest
-from pyDocumentChunker.base import TextSplitter
-from pyDocumentChunker.core import Chunk
+
+from py_document_chunker.base import TextSplitter
+from py_document_chunker.core import Chunk
 
 # ==========================================
 # Test Setup

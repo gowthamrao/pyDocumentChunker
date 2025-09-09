@@ -1,4 +1,4 @@
-from pyDocumentChunker import RecursiveCharacterSplitter
+from py_document_chunker import RecursiveCharacterSplitter
 
 
 def test_recursive_splitter_with_variable_width_regex_separator():

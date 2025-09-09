@@ -1,5 +1,6 @@
 import pytest
-from pyDocumentChunker import MarkdownSplitter
+
+from py_document_chunker import MarkdownSplitter
 
 # FRD Requirement Being Tested:
 # R-3.4.2 (extended): The strategy MUST recognize structural hierarchies, including
