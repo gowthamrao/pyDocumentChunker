@@ -10,9 +10,14 @@ try:
     from llama_index.core.schema import BaseNode, TextNode
 except ImportError:
     # Allow import even if llama_index is not installed.
-    NodeParser = lambda **kwargs: None
+    def NodeParser(**kwargs):
+        return None
+
     BaseNode = object
-    Field = lambda **kwargs: None
+
+    def Field(**kwargs):
+        return None
+
     CallbackManager = Any
     TextNode = Any
 
@@ -51,7 +56,7 @@ class LlamaIndexWrapper(NodeParser):
         if NodeParser is object:
             raise ImportError(
                 "llama-index-core is not installed. Please install it via `pip install "
-                '"pyDocumentChunker[llamaindex]"` or `pip install llama-index-core`.'
+                '"py_document_chunker[llamaindex]"` or `pip install llama-index-core`.'
             )
 
     @classmethod

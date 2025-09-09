@@ -18,7 +18,7 @@ To overcome these challenges, developers must employ more intelligent, **structu
 
 Before we dive into the code, you need to set up your environment and install the necessary libraries. This guide assumes you are working with a dataset of scientific articles that have already been converted from PDF to Markdown.
 
-The core of our pipeline will be the `pyDocumentChunker` package, which provides the specialized chunking strategies we need. We will also need `unstructured` for loading Markdown files, `langchain` as a high-level framework, and `tiktoken` for accurate token counting.
+The core of our pipeline will be the `py_document_chunker` package, which provides the specialized chunking strategies we need. We will also need `unstructured` for loading Markdown files, `langchain` as a high-level framework, and `tiktoken` for accurate token counting.
 
 You can install all required packages with the following command:
 
@@ -30,11 +30,11 @@ pip install .[markdown,tokenizers,semantic]
 *   `unstructured[md]`: A powerful library for parsing and loading documents in various formats, here with the extra dependencies for Markdown.
 *   `langchain`: A popular framework for building LLM applications, which we'll use for high-level abstractions.
 *   `tiktoken`: OpenAI's fast BPE tokenizer, crucial for ensuring our chunks do not exceed the token limits of models like GPT-4.
-*   `.[markdown,tokenizers,semantic]`: This installs the local `pyDocumentChunker` package along with the optional extras needed for Markdown parsing, `tiktoken` integration, and semantic chunking.
+*   `.[markdown,tokenizers,semantic]`: This installs the local `py_document_chunker` package along with the optional extras needed for Markdown parsing, `tiktoken` integration, and semantic chunking.
 
 ## Strategy 1: Structure-Aware Splitting with `MarkdownSplitter`
 
-The most reliable way to chunk a scientific paper in Markdown format is to use a strategy that understands the document's structure. The `MarkdownSplitter` from the `pyDocumentChunker` package is designed for this exact purpose.
+The most reliable way to chunk a scientific paper in Markdown format is to use a strategy that understands the document's structure. The `MarkdownSplitter` from the `py_document_chunker` package is designed for this exact purpose.
 
 This splitter parses the Markdown and identifies logical boundaries based on its hierarchical structure. It prioritizes splitting at the highest-level headings (e.g., between `# H1` and `# H2` sections) before moving to finer-grained elements. This ensures that the generated chunks correspond to logical sections of the paper, such as the abstract, introduction, or specific methods, preserving their context.
 
@@ -47,8 +47,8 @@ Now, let's write a script to load and chunk this document. We'll configure the s
 ```python
 import json
 from langchain_community.document_loaders import UnstructuredMarkdownLoader
-from pyDocumentChunker import MarkdownSplitter
-from pyDocumentChunker.tokenizers import from_tiktoken
+from py_document_chunker import MarkdownSplitter
+from py_document_chunker.tokenizers import from_tiktoken
 
 # --- 1. Load the Document ---
 # We use UnstructuredMarkdownLoader, which is effective at parsing complex
@@ -121,8 +121,8 @@ Let's adapt our previous example to use the `SemanticSplitter`. For this to work
 import json
 import numpy as np
 from langchain_community.document_loaders import UnstructuredMarkdownLoader
-from pyDocumentChunker import SemanticSplitter
-from pyDocumentChunker.tokenizers import from_tiktoken
+from py_document_chunker import SemanticSplitter
+from py_document_chunker.tokenizers import from_tiktoken
 
 # --- (Prerequisite) Setup an Embedding Function ---
 # The SemanticSplitter requires a function that can turn a list of texts
@@ -203,9 +203,9 @@ from pathlib import Path
 from typing import List, Dict, Any
 
 from langchain_community.document_loaders import UnstructuredMarkdownLoader
-from pyDocumentChunker import MarkdownSplitter
-from pyDocumentChunker.tokenizers import from_tiktoken
-from pyDocumentChunker.core import Chunk
+from py_document_chunker import MarkdownSplitter
+from py_document_chunker.tokenizers import from_tiktoken
+from py_document_chunker.core import Chunk
 
 def get_markdown_files(directory: Path) -> List[Path]:
     """Finds all Markdown files in a directory."""

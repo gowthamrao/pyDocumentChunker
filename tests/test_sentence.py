@@ -5,7 +5,8 @@ import pytest
 # Attempt to import NLTK to determine if tests should be skipped.
 try:
     import nltk
-    from pyDocumentChunker import SentenceSplitter
+
+    from py_document_chunker import SentenceSplitter
 
     # We also need to check for the 'punkt' model.
     try:
@@ -98,11 +99,11 @@ def test_dependency_import_error():
     # Simulate that the `nltk` package is not available
     with patch.dict(sys.modules, {"nltk": None}):
         # The module that imports `nltk` must be reloaded for the patch to take effect
-        import pyDocumentChunker.strategies.sentence
+        import py_document_chunker.strategies.sentence
 
-        importlib.reload(pyDocumentChunker.strategies.sentence)
+        importlib.reload(py_document_chunker.strategies.sentence)
 
-        from pyDocumentChunker import SentenceSplitter
+        from py_document_chunker import SentenceSplitter
 
         with pytest.raises(ImportError, match="NLTK is not installed"):
             SentenceSplitter()
@@ -127,10 +128,10 @@ def test_invalid_nlp_backend_raises_error():
 def test_negative_overlap_sentences_raises_error():
     import importlib
 
-    import pyDocumentChunker.strategies.sentence
+    import py_document_chunker.strategies.sentence
 
-    importlib.reload(pyDocumentChunker.strategies.sentence)
-    from pyDocumentChunker import SentenceSplitter
+    importlib.reload(py_document_chunker.strategies.sentence)
+    from py_document_chunker import SentenceSplitter
 
     with pytest.raises(
         ValueError, match="overlap_sentences must be a non-negative integer."

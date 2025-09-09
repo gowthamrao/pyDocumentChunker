@@ -1,5 +1,6 @@
 import pytest
-from pyDocumentChunker import CodeSplitter
+
+from py_document_chunker import CodeSplitter
 
 # Sample code snippets for testing
 PYTHON_CODE = '''
@@ -118,7 +119,7 @@ def test_import_error_if_tree_sitter_not_installed(monkeypatch):
     """
     Tests that an ImportError is raised if tree-sitter is not installed.
     """
-    monkeypatch.setattr("pyDocumentChunker.strategies.code.Parser", None)
+    monkeypatch.setattr("py_document_chunker.strategies.code.Parser", None)
     with pytest.raises(ImportError, match="tree-sitter is not installed"):
         CodeSplitter(language="python")
 

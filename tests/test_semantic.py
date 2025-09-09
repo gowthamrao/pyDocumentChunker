@@ -6,7 +6,8 @@ import pytest
 # Attempt to import numpy to determine if tests should be skipped.
 try:
     import numpy as np
-    from pyDocumentChunker.strategies.semantic import SemanticSplitter
+
+    from py_document_chunker.strategies.semantic import SemanticSplitter
 
     NUMPY_AVAILABLE = True
 except ImportError:
@@ -175,19 +176,19 @@ def test_dependency_import_error():
 
     try:
         with patch.dict(sys.modules, {"numpy": None}):
-            import pyDocumentChunker.strategies.semantic
+            import py_document_chunker.strategies.semantic
 
-            importlib.reload(pyDocumentChunker.strategies.semantic)
+            importlib.reload(py_document_chunker.strategies.semantic)
 
-            from pyDocumentChunker.strategies.semantic import SemanticSplitter
+            from py_document_chunker.strategies.semantic import SemanticSplitter
 
             with pytest.raises(ImportError, match="numpy is not installed"):
                 SemanticSplitter(embedding_function=lambda x: [])
     finally:
         # Restore the module to its original state
-        import pyDocumentChunker.strategies.semantic
+        import py_document_chunker.strategies.semantic
 
-        importlib.reload(pyDocumentChunker.strategies.semantic)
+        importlib.reload(py_document_chunker.strategies.semantic)
 
 
 @pytest.mark.skipif(not NUMPY_AVAILABLE, reason="Numpy is not available")

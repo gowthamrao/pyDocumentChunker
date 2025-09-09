@@ -1,5 +1,6 @@
 import pytest
-from pyDocumentChunker import CodeSplitter
+
+from py_document_chunker import CodeSplitter
 
 # A comprehensive Java code sample to test various top-level declarations.
 SAMPLE_JAVA_CODE = """

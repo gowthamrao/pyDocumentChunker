@@ -1,4 +1,4 @@
-from pyDocumentChunker import FixedSizeSplitter
+from py_document_chunker import FixedSizeSplitter
 
 
 class TestFixedSizeSplitter:
