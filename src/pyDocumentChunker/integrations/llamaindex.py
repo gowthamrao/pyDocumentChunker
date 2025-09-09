@@ -10,8 +10,11 @@ try:
     from llama_index.core.schema import BaseNode, TextNode
 except ImportError:
     # Allow import even if llama_index is not installed.
-    NodeParser = object
+    NodeParser = lambda **kwargs: None
     BaseNode = object
+    Field = lambda **kwargs: None
+    CallbackManager = Any
+    TextNode = Any
 
 
 class LlamaIndexWrapper(NodeParser):

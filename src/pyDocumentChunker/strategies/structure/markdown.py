@@ -9,6 +9,7 @@ try:
     from markdown_it.tree import SyntaxTreeNode
 except ImportError:
     MarkdownIt = None  # type: ignore
+    SyntaxTreeNode = Any  # type: ignore
 
 
 class MarkdownSplitter(TextSplitter):
