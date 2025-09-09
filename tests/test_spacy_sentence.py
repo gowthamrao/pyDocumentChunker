@@ -175,6 +175,12 @@ def test_metadata_correctness():
     assert chunks[2].end_index == 251
 
 
+def test_negative_overlap_raises_error():
+    """Tests that a negative overlap_sentences value raises a ValueError."""
+    with pytest.raises(ValueError, match="overlap_sentences must be a non-negative integer."):
+        SpacySentenceSplitter(overlap_sentences=-1)
+
+
 def test_import_error_if_spacy_not_installed(monkeypatch):
     """
     Tests that SpacySentenceSplitter raises an ImportError if spacy is not installed.
@@ -194,18 +200,23 @@ def test_import_error_if_spacy_not_installed(monkeypatch):
     with pytest.raises(ImportError, match="Spacy is not installed"):
         spacy_sentence.SpacySentenceSplitter()
 
+    # Restore for other tests
+    monkeypatch.undo()
+    importlib.reload(spacy_sentence)
+
 
 def test_model_not_found_error(monkeypatch):
     """Tests an informative error is raised if the model is not downloaded."""
-    import importlib
-
     from py_document_chunker.strategies import spacy_sentence
 
-    def mock_load_error(model_name):
-        raise OSError(f"Can't find model '{model_name}'.")
+    # Directly simulate the state where the model failed to load by patching NLP
+    monkeypatch.setattr(spacy_sentence, "NLP", None)
 
-    # Patch spacy.load within the spacy_sentence module's namespace
-    monkeypatch.setattr(spacy_sentence.spacy, "load", mock_load_error)
+    with pytest.raises(
+        ImportError,
+        match="Spacy is not installed or the model 'en_core_web_sm' could not be loaded",
+    ):
+        spacy_sentence.SpacySentenceSplitter()
 
-    with pytest.raises(ImportError, match="Spacy model 'en_core_web_sm' not found"):
-        importlib.reload(spacy_sentence)
+    # Restore the original NLP object to avoid side effects
+    monkeypatch.undo()

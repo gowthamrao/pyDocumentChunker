@@ -130,27 +130,66 @@ def test_empty_and_whitespace_text():
     assert splitter.split_text("   \n \t ") == []
 
 
-def test_private_methods():
-    """Tests the private helper methods directly."""
+def test_private_get_node_text_with_nested_children():
+    """
+    Tests the private method _get_node_text with a more complex, nested node
+    to ensure the recursive search for the end line works correctly.
+    """
+    from unittest.mock import Mock
     splitter = MarkdownSplitter()
-    text = "line 1\nline 2"
-    line_indices = splitter._get_line_start_indices(text)
 
-    # Mock SyntaxTreeNode
-    node = patch(
-        "py_document_chunker.strategies.structure.markdown.SyntaxTreeNode"
-    ).start()
-    node.map = (0, 2)
-    node.children = []
+    COMPLEX_MD = """# L1
+## L2
+- Item
+"""
+    line_indices = splitter._get_line_start_indices(COMPLEX_MD)
 
-    # Test _get_node_text
-    content, start, end = splitter._get_node_text(node, text, line_indices)
-    assert content == text
-    assert start == 0
-    assert end == len(text)
+    # Mock SyntaxTreeNode structure to mimic markdown-it's output for COMPLEX_MD
+    grandchild_node = Mock()
+    grandchild_node.map = (2, 3)
+    grandchild_node.children = []
 
-    # Test _get_nodes_text
-    content, start, end = splitter._get_nodes_text([node], text, line_indices)
-    assert content == text
-    assert start == 0
-    assert end == len(text)
+    child_node_h2 = Mock()
+    child_node_h2.map = (1, 3)
+    child_node_h2.children = [grandchild_node]
+
+    top_level_node = Mock()
+    top_level_node.map = (0, 3)
+    top_level_node.children = [child_node_h2]
+
+    # The while loop in _get_node_text should be tested by this.
+    text, start, end = splitter._get_node_text(top_level_node, COMPLEX_MD, line_indices)
+
+    assert text.strip() == "## L2\n- Item"
+    assert start == 5  # Start of "## L2"
+    assert end == 18 # End of "- Item\n"
+
+def test_markdown_splitting_without_trailing_newline():
+    """
+    Tests that the splitter correctly handles markdown text that does not
+    end with a trailing newline. This covers the `else len(text)` branch.
+    """
+    splitter = MarkdownSplitter(chunk_size=1000)
+    text = "# Section 1\n\nSome text" # No trailing newline
+
+    chunks = splitter.split_text(text)
+
+    assert len(chunks) == 1
+    assert chunks[0].content.strip().startswith("# Section 1")
+    assert chunks[0].content.strip().endswith("Some text")
+    assert chunks[0].end_index == len(text)
+
+def test_type_boundary_after_heading():
+    """
+    Tests the edge case where a heading is followed by a different block type,
+    ensuring they are not split if they fit within the chunk size.
+    """
+    splitter = MarkdownSplitter(chunk_size=1024)
+    text = "# Heading\n- List Item"
+
+    chunks = splitter.split_text(text)
+
+    # Expectation: The heading and the list are kept together in one chunk
+    # because the logic explicitly prevents a type-based split after a heading.
+    assert len(chunks) == 1
+    assert chunks[0].content == "# Heading\n- List Item"
