@@ -6,12 +6,12 @@ build-backend = "setuptools.build_meta"
 name = "pyDocumentChunker"
 version = "0.1.0"
 description = "A state-of-the-art Python package for advanced text segmentation (chunking)."
-readme = "README.md"
+readme = { file = "README.md", content-type = "text/markdown" }
+keywords = ["text chunking", "text splitting", "RAG", "Retrieval-Augmented Generation", "NLP", "natural language processing", "document processing", "langchain", "llamaindex"]
 authors = [{ name = "Gowtham Rao", email = "rao@ohdsi.org" }]
-license = { file = "LICENSE" }
+license = "Apache-2.0"
 classifiers = [
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent",
     "Topic :: Text Processing",
     "Topic :: Scientific/Engineering :: Artificial Intelligence"

@@ -18,28 +18,28 @@ You can install the core package and its dependencies using pip. The package is 
 
 ```bash
 # Install the core package
-pip install .
+pip install pyDocumentChunker
 
 # To include support for sentence splitting (via NLTK or Spacy)
-pip install .[nlp,spacy]
+pip install pyDocumentChunker[nlp,spacy]
 
 # To include support for Markdown and HTML splitting
-pip install .[markdown,html]
+pip install pyDocumentChunker[markdown,html]
 
 # To include support for semantic splitting (requires numpy)
-pip install .[semantic]
+pip install pyDocumentChunker[semantic]
 
 # To include support for code splitting (requires tree-sitter)
-pip install .[code]
+pip install pyDocumentChunker[code]
 
 # To include support for token-based length functions (via tiktoken)
-pip install .[tokenizers]
+pip install pyDocumentChunker[tokenizers]
 
 # To install framework integrations
-pip install .[langchain,llamaindex]
+pip install pyDocumentChunker[langchain,llamaindex]
 
 # To install everything for development
-pip install .[dev,nlp,markdown,html,semantic,code,tokenizers,langchain,llamaindex]
+pip install pyDocumentChunker[dev,nlp,markdown,html,semantic,code,tokenizers,langchain,llamaindex]
 ```
 
 ## Global Configuration
@@ -138,7 +138,7 @@ A more advanced sentence splitter that uses `spacy` for higher accuracy sentence
 
 ```python
 from pyDocumentChunker import SpacySentenceSplitter
-# Ensure you have run: pip install .[spacy]
+# Ensure you have run: pip install pyDocumentChunker[spacy]
 # And downloaded the model: python -m spacy download en_core_web_sm
 splitter = SpacySentenceSplitter(chunk_size=1024, overlap_sentences=1)
 chunks = splitter.split_text(my_prose_text)
@@ -210,7 +210,7 @@ A core design principle of this package is its tokenization awareness (FRD R-1.3
 The package provides an optional utility to create a length function from OpenAI's `tiktoken` library. First, ensure you have the necessary dependency installed:
 
 ```bash
-pip install .[tokenizers]
+pip install pyDocumentChunker[tokenizers]
 ```
 
 Then, you can create a token-based length function and pass it to any splitter.
