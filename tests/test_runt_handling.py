@@ -79,7 +79,7 @@ def test_merge_previous_single_runt_in_middle():
     result = splitter._enforce_minimum_chunk_size(chunks, text)
 
     assert len(result) == 2
-    assert result[0].content == "A long piece of text.runt"
+    assert result[0].content == "A long piece of text. runt"
     assert result[0].end_index == chunks[1].end_index
     assert result[1].content == "Another long piece."
     assert result[0].sequence_number == 0 and result[1].sequence_number == 1
@@ -99,7 +99,7 @@ def test_merge_previous_runt_at_end():
     result = splitter._enforce_minimum_chunk_size(chunks, text)
 
     assert len(result) == 2
-    assert result[1].content == "Another long piece.runt"
+    assert result[1].content == "Another long piece. runt"
     assert result[1].end_index == chunks[2].end_index
     assert result[0].content == "A long piece of text."
 
@@ -118,7 +118,7 @@ def test_merge_previous_runt_at_start():
     result = splitter._enforce_minimum_chunk_size(chunks, text)
 
     assert len(result) == 2
-    assert result[0].content == "runtA long piece of text."
+    assert result[0].content == "runt A long piece of text."
     assert result[0].start_index == chunks[0].start_index
     assert result[0].end_index == chunks[1].end_index
 
@@ -137,7 +137,7 @@ def test_merge_previous_multiple_consecutive_runts():
     result = splitter._enforce_minimum_chunk_size(chunks, text)
 
     assert len(result) == 2
-    assert result[0].content == "A long piece of text.runt1runt2"
+    assert result[0].content == "A long piece of text. runt1 runt2"
     assert result[0].end_index == chunks[2].end_index
 
 
@@ -177,7 +177,7 @@ def test_merge_next_single_runt_in_middle():
 
     assert len(result) == 2
     assert result[0].content == "A long piece of text."
-    assert result[1].content == "runtAnother long piece."
+    assert result[1].content == "runt Another long piece."
     assert result[1].start_index == chunks[1].start_index
 
 
@@ -195,7 +195,7 @@ def test_merge_next_runt_at_start():
     result = splitter._enforce_minimum_chunk_size(chunks, text)
 
     assert len(result) == 2
-    assert result[0].content == "runtA long piece of text."
+    assert result[0].content == "runt A long piece of text."
     assert result[0].start_index == chunks[0].start_index
 
 
@@ -214,7 +214,7 @@ def test_merge_next_runt_at_end():
 
     assert len(result) == 2
     assert result[0].content == "A long piece of text."
-    assert result[1].content == "Another long piece.runt"
+    assert result[1].content == "Another long piece. runt"
     assert result[1].end_index == chunks[2].end_index
 
 
@@ -233,7 +233,7 @@ def test_merge_next_multiple_consecutive_runts():
 
     assert len(result) == 2
     assert result[0].content == "A long piece of text."
-    assert result[1].content == "runt1runt2Another long piece."
+    assert result[1].content == "runt1 runt2 Another long piece."
     assert result[1].start_index == chunks[1].start_index
 
 
