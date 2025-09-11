@@ -130,7 +130,9 @@ class TextSplitter(ABC):
                             self.length_function(prev_chunk.content)
                             + self.length_function(current_chunk.content)
                         ) <= self.chunk_size:
-                            prev_chunk.content += current_chunk.content
+                            prev_chunk.content = original_text[
+                                prev_chunk.start_index : current_chunk.end_index
+                            ]
                             prev_chunk.end_index = current_chunk.end_index
                             merged_chunks.pop(i)
                             # After merging, stay at the same index `i` in case the
@@ -148,9 +150,9 @@ class TextSplitter(ABC):
                         self.length_function(merged_chunks[0].content)
                         + self.length_function(merged_chunks[1].content)
                     ) <= self.chunk_size:
-                        merged_chunks[1].content = (
-                            merged_chunks[0].content + merged_chunks[1].content
-                        )
+                        merged_chunks[1].content = original_text[
+                            merged_chunks[0].start_index : merged_chunks[1].end_index
+                        ]
                         merged_chunks[1].start_index = merged_chunks[0].start_index
                         merged_chunks.pop(0)
 
@@ -168,9 +170,9 @@ class TextSplitter(ABC):
                             self.length_function(current_chunk.content)
                             + self.length_function(next_chunk.content)
                         ) <= self.chunk_size:
-                            next_chunk.content = (
-                                current_chunk.content + next_chunk.content
-                            )
+                            next_chunk.content = original_text[
+                                current_chunk.start_index : next_chunk.end_index
+                            ]
                             next_chunk.start_index = current_chunk.start_index
                             merged_chunks.pop(i)
                     i -= 1
@@ -184,7 +186,9 @@ class TextSplitter(ABC):
                         self.length_function(merged_chunks[-1].content)
                         + self.length_function(merged_chunks[-2].content)
                     ) <= self.chunk_size:
-                        merged_chunks[-2].content += merged_chunks[-1].content
+                        merged_chunks[-2].content = original_text[
+                            merged_chunks[-2].start_index : merged_chunks[-1].end_index
+                        ]
                         merged_chunks[-2].end_index = merged_chunks[-1].end_index
                         merged_chunks.pop(-1)
 
