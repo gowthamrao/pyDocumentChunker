@@ -40,7 +40,9 @@ code = [
 markdown = [
     "markdown-it-py>=3.0.0"
 ]
-html = []
+html = [
+    "html5lib>=1.1",
+]
 # For integration with other frameworks
 langchain = ["langchain-core"]
 llamaindex = ["llama-index-core>=0.12.29"]
@@ -50,7 +52,8 @@ tokenizers = [
 # For development and testing
 dev = [
     "pytest>=8.0.0",
-    "py_document_chunker[tokenizers,nlp,spacy,semantic,code,markdown,langchain,llamaindex]",
+    "pytest-cov>=5.0.0",
+    "py_document_chunker[tokenizers,nlp,spacy,semantic,code,markdown,langchain,llamaindex,html]",
     "black>=24.0.0",
     "ruff>=0.1.0",
     "pre-commit>=3.0.0",
