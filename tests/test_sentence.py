@@ -145,3 +145,20 @@ def test_negative_overlap_sentences_raises_error():
 def test_empty_text_returns_empty_list():
     splitter = SentenceSplitter()
     assert splitter.split_text("") == []
+
+
+@pytest.mark.skipif(
+    not NLTK_AVAILABLE, reason="NLTK or its 'punkt' model is not available"
+)
+def test_whitespace_preservation():
+    """Tests that whitespace between sentences is preserved in the chunk content."""
+    text_with_newlines = "This is the first sentence.\n\nThis is the second.\n\n  And a third."
+    splitter = SentenceSplitter(chunk_size=100, overlap_sentences=0)
+    chunks = splitter.split_text(text_with_newlines)
+
+    assert len(chunks) == 1
+    chunk = chunks[0]
+
+    # The chunk content should be an exact slice from the original text.
+    expected_content = text_with_newlines[chunk.start_index:chunk.end_index]
+    assert chunk.content == expected_content
