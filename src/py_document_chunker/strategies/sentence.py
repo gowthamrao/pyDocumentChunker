@@ -102,22 +102,25 @@ class SentenceSplitter(TextSplitter):
         current_chunk_sents: List[Tuple[str, int, int]] = []
 
         for sent, start, end in processed_sentences:
-            # Join the current sentences with a space to check the length
-            potential_content = " ".join(
-                s[0] for s in current_chunk_sents + [(sent, start, end)]
-            )
+            # To check the length, we should measure the length of the text slice,
+            # not a string joined with spaces, to be accurate.
+            potential_start_index = current_chunk_sents[0][1] if current_chunk_sents else start
+            potential_end_index = end
+            potential_content_slice = text[potential_start_index:potential_end_index]
 
             if (
-                self.length_function(potential_content) > self.chunk_size
+                self.length_function(potential_content_slice) > self.chunk_size
                 and current_chunk_sents
             ):
                 # Finalize the current chunk
-                final_content = " ".join(s[0] for s in current_chunk_sents)
+                start_index = current_chunk_sents[0][1]
+                end_index = current_chunk_sents[-1][2]
+                final_content = text[start_index:end_index]
                 chunks.append(
                     Chunk(
                         content=final_content,
-                        start_index=current_chunk_sents[0][1],
-                        end_index=current_chunk_sents[-1][2],
+                        start_index=start_index,
+                        end_index=end_index,
                         sequence_number=len(chunks),
                         source_document_id=source_document_id,
                         chunking_strategy_used="sentence",
@@ -132,12 +135,14 @@ class SentenceSplitter(TextSplitter):
 
         # Add the last remaining chunk
         if current_chunk_sents:
-            final_content = " ".join(s[0] for s in current_chunk_sents)
+            start_index = current_chunk_sents[0][1]
+            end_index = current_chunk_sents[-1][2]
+            final_content = text[start_index:end_index]
             chunks.append(
                 Chunk(
                     content=final_content,
-                    start_index=current_chunk_sents[0][1],
-                    end_index=current_chunk_sents[-1][2],
+                    start_index=start_index,
+                    end_index=end_index,
                     sequence_number=len(chunks),
                     source_document_id=source_document_id,
                     chunking_strategy_used="sentence",
