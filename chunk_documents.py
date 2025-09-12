@@ -3,63 +3,120 @@ import glob
 import json
 import os
 import re
-from typing import Dict, Iterator
+import uuid
+from typing import Dict, Iterator, List
+
+# For robust sentence tokenization
+import nltk
+
+# --- NLTK Setup ---
+# Download the 'punkt' tokenizer data if not already present.
+# This is a one-time setup.
+try:
+    nltk.data.find("tokenizers/punkt")
+except nltk.downloader.DownloadError:
+    print("Downloading nltk 'punkt' model...")
+    nltk.download("punkt")
+    print("Download complete.")
+
+
+def chunk_text_by_sentences(
+    text: str, max_chunk_words: int, overlap_sentences: int
+) -> List[str]:
+    """
+    Splits a long text into semantically meaningful chunks based on sentences.
+
+    Args:
+        text: The text to be chunked.
+        max_chunk_words: The approximate maximum number of words for each chunk.
+        overlap_sentences: The number of sentences to overlap between consecutive chunks.
+
+    Returns:
+        A list of text chunks.
+    """
+    if not text:
+        return []
+
+    # 1. Split the text into sentences
+    sentences = nltk.sent_tokenize(text)
+
+    # 2. Group sentences into chunks
+    chunks = []
+    current_chunk_sentences: List[str] = []
+    current_word_count = 0
+
+    for sentence in sentences:
+        sentence_word_count = len(sentence.split())
+
+        # If adding the next sentence exceeds the max word count, finalize the current chunk
+        if (
+            current_word_count + sentence_word_count > max_chunk_words
+            and current_chunk_sentences
+        ):
+            chunks.append(" ".join(current_chunk_sentences))
+
+            # Start the next chunk with an overlap
+            num_overlap = min(len(current_chunk_sentences), overlap_sentences)
+            current_chunk_sentences = current_chunk_sentences[-num_overlap:]
+            current_word_count = sum(len(s.split()) for s in current_chunk_sentences)
+        
+        current_chunk_sentences.append(sentence)
+        current_word_count += sentence_word_count
+
+    # Add the last remaining chunk
+    if current_chunk_sentences:
+        chunks.append(" ".join(current_chunk_sentences))
+
+    return chunks
 
 
 def chunk_by_section(
-    content: str, max_chunk_words: int, file_path: str
+    content: str, max_chunk_words: int, file_path: str, overlap_sentences: int
 ) -> Iterator[Dict]:
     """
-    Splits the document by Markdown headers and then by paragraphs if a section is too long.
-
-    This function implements a hierarchical chunking strategy.
-    1. It first splits the document by Markdown headers (# or ##).
-    2. For each section, it checks if the word count exceeds max_chunk_words.
-    3. If the section is within the limit, it's yielded as a single chunk.
-    4. If the section is too long, it's split into paragraphs, and each paragraph
-       is yielded as a separate chunk.
+    Splits a Markdown document by sections, then further chunks long sections/paragraphs
+    by sentences while maintaining sentence integrity.
 
     Args:
         content: The full string content of the Markdown file.
-        max_chunk_words: The maximum number of words a chunk can have before being split by paragraph.
+        max_chunk_words: The maximum number of words for a chunk.
         file_path: The original file path, used for metadata.
+        overlap_sentences: The number of sentences for overlap in long text blocks.
 
     Yields:
-        A dictionary representing a single chunk, with its text and metadata.
+        A dictionary for each chunk with its text and metadata.
     """
     # Regex to split by Markdown headers (## or #).
-    # The `(?=^##? )` is a positive lookahead that finds the location of headers
-    # without consuming them in the split.
     sections = re.split(r"(?=^##? )", content, flags=re.MULTILINE)
 
-    # The first element might be some text before the first header (e.g., the main title).
-    # We'll treat it as a section with a "Preamble" header.
+    def create_chunk_object(text: str, section_header: str) -> Dict:
+        """Helper to create the final chunk dictionary with a UUID."""
+        return {
+            "text": text,
+            "metadata": {
+                "chunk_id": str(uuid.uuid4()),
+                "original_filename": os.path.basename(file_path),
+                "section_header": section_header,
+            },
+        }
+
+    # Handle preamble (text before the first header)
     if sections and not sections[0].strip().startswith("#"):
         preamble = sections.pop(0).strip()
         if preamble:
-            # Handle the case where the preamble itself is too long
             if len(preamble.split()) > max_chunk_words:
-                paragraphs = preamble.split("\n\n")
-                for i, para in enumerate(paragraphs):
-                    para = para.strip()
-                    if para:
-                        yield {
-                            "text": para,
-                            "metadata": {
-                                "original_filename": os.path.basename(file_path),
-                                "section_header": f"Preamble (Paragraph {i+1})",
-                            },
-                        }
+                for i, sentence_chunk in enumerate(
+                    chunk_text_by_sentences(
+                        preamble, max_chunk_words, overlap_sentences
+                    )
+                ):
+                    yield create_chunk_object(
+                        sentence_chunk, f"Preamble (Part {i+1})"
+                    )
             else:
-                yield {
-                    "text": preamble,
-                    "metadata": {
-                        "original_filename": os.path.basename(file_path),
-                        "section_header": "Preamble",
-                    },
-                }
+                yield create_chunk_object(preamble, "Preamble")
 
-    # Process the remaining sections, which each start with a header.
+    # Process the remaining sections
     for section in sections:
         section = section.strip()
         if not section:
@@ -70,52 +127,50 @@ def chunk_by_section(
             header = header_line.strip()
             body = body.strip()
         except ValueError:
-            # This can happen if a section has a header but no body.
             header = section.strip()
             body = ""
 
         if not body:
             continue
 
-        word_count = len(body.split())
-
-        if word_count <= max_chunk_words:
-            # If the section is small enough, yield it as a single chunk.
-            yield {
-                "text": body,
-                "metadata": {
-                    "original_filename": os.path.basename(file_path),
-                    "section_header": header,
-                },
-            }
+        if len(body.split()) <= max_chunk_words:
+            yield create_chunk_object(body, header)
         else:
-            # If the section is too long, split it into paragraphs.
+            # If the section is long, split into paragraphs first
             paragraphs = body.split("\n\n")
             for i, para in enumerate(paragraphs):
                 para = para.strip()
-                if para:  # Ensure we don't yield empty paragraphs
-                    yield {
-                        "text": para,
-                        "metadata": {
-                            "original_filename": os.path.basename(file_path),
-                            "section_header": f"{header} (Paragraph {i+1})",
-                        },
-                    }
+                if not para:
+                    continue
+
+                if len(para.split()) > max_chunk_words:
+                    # If a paragraph is still too long, chunk it by sentences
+                    for j, sentence_chunk in enumerate(
+                        chunk_text_by_sentences(
+                            para, max_chunk_words, overlap_sentences
+                        )
+                    ):
+                        yield create_chunk_object(
+                            sentence_chunk,
+                            f"{header} (Paragraph {i+1}, Part {j+1})",
+                        )
+                else:
+                    yield create_chunk_object(
+                        para, f"{header} (Paragraph {i+1})"
+                    )
 
 
-def process_documents(input_dir: str, output_file: str, max_chunk_words: int) -> None:
+def process_documents(
+    input_dir: str, output_file: str, max_chunk_words: int, overlap_sentences: int
+) -> None:
     """
-    Processes all Markdown files in a directory, chunks them, and saves them to a JSONL file.
-
-    Args:
-        input_dir: The directory containing the .md files.
-        output_file: The path to the output .jsonl file.
-        max_chunk_words: The maximum word count for a chunk.
+    Processes all Markdown files in a directory, chunks them, and saves to a JSONL file.
+    Adds per-document chunk indexing to the metadata.
     """
-    # Find all Markdown files in the input directory.
     md_files = glob.glob(os.path.join(input_dir, "*.md"))
-
     print(f"Found {len(md_files)} Markdown files to process.")
+
+    comment_pattern = re.compile(r"^# Parsed Document:.*\n?", flags=re.MULTILINE)
 
     with open(output_file, "w", encoding="utf-8") as f_out:
         for file_path in md_files:
@@ -124,10 +179,28 @@ def process_documents(input_dir: str, output_file: str, max_chunk_words: int) ->
                 with open(file_path, "r", encoding="utf-8") as f_in:
                     content = f_in.read()
 
-                for chunk in chunk_by_section(content, max_chunk_words, file_path):
-                    # Convert the chunk dictionary to a JSON string and write it to the file,
-                    # followed by a newline to create the JSONL format.
+                content_cleaned = comment_pattern.sub("", content)
+
+                # --- MODIFICATION START ---
+                # Step 1: Generate all chunks for the current file and store them in a list.
+                chunks_for_file = list(
+                    chunk_by_section(
+                        content_cleaned, max_chunk_words, file_path, overlap_sentences
+                    )
+                )
+                
+                # Step 2: Get the total number of chunks for this document.
+                total_chunks = len(chunks_for_file)
+
+                # Step 3: Iterate through the collected chunks to add new metadata and write to file.
+                for i, chunk in enumerate(chunks_for_file):
+                    # Add the new metadata fields
+                    chunk["metadata"]["chunk_index"] = i
+                    chunk["metadata"]["total_chunks_in_doc"] = total_chunks
+                    
                     f_out.write(json.dumps(chunk) + "\n")
+                # --- MODIFICATION END ---
+                    
             except Exception as e:
                 print(f"Error processing file {file_path}: {e}")
 
@@ -135,11 +208,9 @@ def process_documents(input_dir: str, output_file: str, max_chunk_words: int) ->
 
 
 def main():
-    """
-    Main function to parse command-line arguments and start the chunking process.
-    """
+    """Main function to parse command-line arguments and start the chunking process."""
     parser = argparse.ArgumentParser(
-        description="Chunk scientific articles in Markdown format for LLM applications."
+        description="Chunk scientific articles in Markdown format using a sentence-aware strategy."
     )
     parser.add_argument(
         "--input_dir",
@@ -150,19 +221,27 @@ def main():
     parser.add_argument(
         "--output_file",
         type=str,
-        default="chunks.jsonl",
-        help="The path to the output JSONL file. Defaults to 'chunks.jsonl'.",
+        default="chunks_final.jsonl",
+        help="The path to the output JSONL file. Defaults to 'chunks_final.jsonl'.",
     )
     parser.add_argument(
         "--max_chunk_words",
         type=int,
-        default=500,
-        help="The maximum number of words for a chunk. Sections exceeding this will be split by paragraph. Defaults to 500.",
+        default=384,  # A common token size for embedding models is 512, this is a safe word count
+        help="The target maximum number of words for a chunk. Defaults to 384.",
+    )
+    parser.add_argument(
+        "--overlap_sentences",
+        type=int,
+        default=2,
+        help="The number of sentences to overlap between chunks. Defaults to 2.",
     )
 
     args = parser.parse_args()
 
-    process_documents(args.input_dir, args.output_file, args.max_chunk_words)
+    process_documents(
+        args.input_dir, args.output_file, args.max_chunk_words, args.overlap_sentences
+    )
 
 
 if __name__ == "__main__":
