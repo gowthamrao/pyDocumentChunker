@@ -218,6 +218,52 @@ def test_fallback_on_last_group():
 
 
 @pytest.mark.skipif(not NUMPY_AVAILABLE, reason="Numpy is not available")
+def test_semantic_splitting_with_runt_handling():
+    """
+    Tests that small chunks created by semantic splitting are correctly handled
+    by merging them with the previous chunk.
+    """
+    # Topic A is long, the transition is very short (a runt), and Topic B is long.
+    text = (
+        "This is a long sentence about Topic A. It has plenty of content. "
+        "Go. "
+        "This is a long sentence about Topic B. It also has plenty of content."
+    )
+
+    # The mock embeddings will create a clear semantic break around "Go."
+    def mock_embedding_function_runt(texts: List[str]) -> "np.ndarray":
+        # This mock function is intentionally simple and order-dependent for this test.
+        # It simulates a clear semantic break.
+        embeddings = []
+        for i, text in enumerate(texts):
+            if i < 2:  # First two sentences are Topic A
+                embeddings.append([1.0, 0.0, 0.0])
+            elif i == 2:  # The "Go." sentence is its own topic
+                embeddings.append([0.0, 1.0, 0.0])
+            else:  # The remaining sentences are Topic B
+                embeddings.append([0.0, 0.0, 1.0])
+        return np.array(embeddings)
+
+    splitter = SemanticSplitter(
+        embedding_function=mock_embedding_function_runt,
+        breakpoint_method="absolute",
+        breakpoint_threshold=0.5,
+        minimum_chunk_size=10,  # "Go." has length 3.
+        min_chunk_merge_strategy="merge_with_previous",
+    )
+    chunks = splitter.split_text(text)
+
+    # Without runt handling, we would expect 3 chunks.
+    # With merging, the "Go." chunk should be merged with the "Topic A" chunk.
+    # The "Topic B" chunk should remain separate.
+    # So we expect 2 chunks.
+    assert len(chunks) == 2
+    assert "Go." in chunks[0].content
+    assert "Topic A" in chunks[0].content
+    assert "Topic B" in chunks[1].content
+
+
+@pytest.mark.skipif(not NUMPY_AVAILABLE, reason="Numpy is not available")
 def test_fallback_on_intermediate_group():
     """
     Tests that the fallback splitter is correctly applied to an intermediate group.

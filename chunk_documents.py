@@ -197,8 +197,10 @@ def process_documents(
 
                 # Step 3: Iterate through the collected chunks to add new metadata and write to file.
                 for i, chunk in enumerate(chunks_for_file):
+
                     chunk["metadata"]["document_id"] = document_uuid
                     
+
                     # Add the new metadata fields
                     chunk["metadata"]["chunk_index"] = i
                     chunk["metadata"]["total_chunks_in_doc"] = total_chunks

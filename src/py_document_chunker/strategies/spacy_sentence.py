@@ -39,9 +39,12 @@ class SpacySentenceSplitter(TextSplitter):
             raise ValueError("overlap_sentences must be a non-negative integer.")
         self.overlap_sentences = overlap_sentences
 
+        # The fallback splitter should have a small overlap to ensure it can
+        # handle sentences that are just over the chunk size.
+        fallback_overlap = kwargs.get("chunk_overlap", 0)
         self._fallback_splitter = RecursiveCharacterSplitter(
             chunk_size=self.chunk_size,
-            chunk_overlap=0,  # No overlap in fallback since sentences are merged later
+            chunk_overlap=fallback_overlap,
             length_function=self.length_function,
             normalize_whitespace=self.normalize_whitespace,
             unicode_normalize=self.unicode_normalize,
@@ -51,7 +54,7 @@ class SpacySentenceSplitter(TextSplitter):
         self, text: str, source_document_id: Optional[str] = None
     ) -> List[Chunk]:
         text = self._preprocess(text)
-        if not text:
+        if not text.strip():
             return []
 
         doc = NLP(text)
@@ -62,33 +65,48 @@ class SpacySentenceSplitter(TextSplitter):
         if not all_sentences:
             return []
 
-        processed_sentences = []
-        for sentence_text, start, end in all_sentences:
-            if self.length_function(sentence_text) > self.chunk_size:
-                fallback_chunks = self._fallback_splitter.split_text(sentence_text)
-                for fb_chunk in fallback_chunks:
-                    processed_sentences.append(
-                        (
-                            fb_chunk.content,
-                            start + fb_chunk.start_index,
-                            start + fb_chunk.end_index,
-                        )
-                    )
-            else:
-                processed_sentences.append((sentence_text, start, end))
-
         chunks: List[Chunk] = []
         current_chunk_sents: List[Tuple[str, int, int]] = []
 
-        for sent, start, end in processed_sentences:
-            potential_content = " ".join(
-                s[0] for s in current_chunk_sents + [(sent, start, end)]
-            )
+        for sentence_text, start, end in all_sentences:
+            # If the sentence itself is larger than the chunk size, we have to handle it separately.
+            if self.length_function(sentence_text) > self.chunk_size:
+                # First, finalize any existing sentences in the current chunk.
+                if current_chunk_sents:
+                    final_content = " ".join(s[0] for s in current_chunk_sents)
+                    chunks.append(
+                        Chunk(
+                            content=final_content,
+                            start_index=current_chunk_sents[0][1],
+                            end_index=current_chunk_sents[-1][2],
+                            sequence_number=len(chunks),
+                            source_document_id=source_document_id,
+                            chunking_strategy_used="spacy_sentence",
+                        )
+                    )
+                    # Reset for the next iteration.
+                    current_chunk_sents = []
 
+                # Now, split the oversized sentence using the fallback splitter.
+                fallback_chunks = self._fallback_splitter.split_text(sentence_text)
+                for fb_chunk in fallback_chunks:
+                    # Adjust indices to be relative to the original document
+                    fb_chunk.start_index += start
+                    fb_chunk.end_index += start
+                    fb_chunk.sequence_number = len(chunks)
+                    fb_chunk.chunking_strategy_used = "spacy_sentence_fallback"
+                    chunks.append(fb_chunk)
+                continue
+
+            # Check if adding the new sentence would exceed the chunk size.
+            potential_content = " ".join(
+                s[0] for s in current_chunk_sents + [(sentence_text, start, end)]
+            )
             if (
                 self.length_function(potential_content) > self.chunk_size
                 and current_chunk_sents
             ):
+                # Finalize the current chunk.
                 final_content = " ".join(s[0] for s in current_chunk_sents)
                 chunks.append(
                     Chunk(
@@ -101,10 +119,12 @@ class SpacySentenceSplitter(TextSplitter):
                     )
                 )
 
+                # Handle overlap by keeping some of the previous sentences.
                 overlap_idx = max(0, len(current_chunk_sents) - self.overlap_sentences)
                 current_chunk_sents = current_chunk_sents[overlap_idx:]
 
-            current_chunk_sents.append((sent, start, end))
+            # Add the new sentence to the current chunk.
+            current_chunk_sents.append((sentence_text, start, end))
 
         if current_chunk_sents:
             final_content = " ".join(s[0] for s in current_chunk_sents)
