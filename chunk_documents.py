@@ -176,6 +176,9 @@ def process_documents(
         for file_path in md_files:
             print(f"Processing {file_path}...")
             try:
+                # Generate a single, unique ID for the entire document
+                document_uuid = str(uuid.uuid4())
+                
                 with open(file_path, "r", encoding="utf-8") as f_in:
                     content = f_in.read()
 
@@ -194,6 +197,8 @@ def process_documents(
 
                 # Step 3: Iterate through the collected chunks to add new metadata and write to file.
                 for i, chunk in enumerate(chunks_for_file):
+                    chunk["metadata"]["document_id"] = document_uuid
+                    
                     # Add the new metadata fields
                     chunk["metadata"]["chunk_index"] = i
                     chunk["metadata"]["total_chunks_in_doc"] = total_chunks
