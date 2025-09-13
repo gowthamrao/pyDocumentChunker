@@ -34,7 +34,7 @@ class MarkdownSplitter(TextSplitter):
                 "markdown-it-py is not installed. Please install it via `pip install "
                 '"pyDocumentChunker[markdown]"` or `pip install markdown-it-py`.'
             )
-        self.md_parser = MarkdownIt("commonmark", {"sourcepos": True})
+        self.md_parser = MarkdownIt("commonmark", {"sourcepos": True}).enable("table")
         self._fallback_splitter = RecursiveCharacterSplitter(
             chunk_size=self.chunk_size,
             chunk_overlap=self.chunk_overlap,
